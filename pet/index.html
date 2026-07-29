@@ -79,6 +79,32 @@
     font-weight: 600;
   }
 
+  .species-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .species-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    border: 2px solid var(--bar-track);
+    background: var(--card);
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .species-btn .emoji { font-size: 1.1rem; }
+  .species-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #fbf0e8;
+  }
+
   .stage {
     background: linear-gradient(180deg, #cdeaf7 0%, #eaf6ee 100%);
     border-radius: 24px;
@@ -126,10 +152,17 @@
   .mood-sleeping .mouth-sleeping { display: block; }
 
   .body-shape { fill: url(#bodyGradient); transition: filter 0.4s ease; }
+  .species-trex .body-shape { fill: url(#bodyGradientTrex); }
+  .species-unicorn .body-shape { fill: url(#bodyGradientUnicorn); }
   .mood-sad .body-shape { filter: grayscale(35%) brightness(0.95); }
 
   .dirt-spot { display: none; }
   .dirty .dirt-spot { display: block; }
+
+  .accessory { display: none; }
+  .species-blob .accessory-blob { display: block; }
+  .species-trex .accessory-trex { display: block; }
+  .species-unicorn .accessory-unicorn { display: block; }
 
   .zzz { display: none; }
   .mood-sleeping .zzz { display: block; animation: float-up 2.4s ease-in-out infinite; }
@@ -236,6 +269,12 @@
       <button type="submit">Save</button>
     </form>
 
+    <div class="species-row" id="species-row">
+      <button class="species-btn" data-species="blob"><span class="emoji">🟢</span> Slime</button>
+      <button class="species-btn" data-species="trex"><span class="emoji">🦖</span> T-Rex</button>
+      <button class="species-btn" data-species="unicorn"><span class="emoji">🦄</span> Unicorn</button>
+    </div>
+
     <div class="stage" id="stage">
       <svg id="pet-svg" viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -243,16 +282,57 @@
             <stop offset="0%" stop-color="#c8f2e0"/>
             <stop offset="100%" stop-color="#5fb8a6"/>
           </radialGradient>
+          <radialGradient id="bodyGradientTrex" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#e3f2b8"/>
+            <stop offset="100%" stop-color="#6ea852"/>
+          </radialGradient>
+          <radialGradient id="bodyGradientUnicorn" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#fff7fb"/>
+            <stop offset="100%" stop-color="#e2c6ec"/>
+          </radialGradient>
         </defs>
 
-        <!-- antennae -->
-        <line x1="75" y1="35" x2="65" y2="10" stroke="#5fb8a6" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="65" cy="10" r="5" fill="#f4a6c1"/>
-        <line x1="125" y1="35" x2="135" y2="10" stroke="#5fb8a6" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="135" cy="10" r="5" fill="#f4a6c1"/>
+        <!-- blob accessories -->
+        <g class="accessory accessory-blob">
+          <line x1="75" y1="35" x2="65" y2="10" stroke="#5fb8a6" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="65" cy="10" r="5" fill="#f4a6c1"/>
+          <line x1="125" y1="35" x2="135" y2="10" stroke="#5fb8a6" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="135" cy="10" r="5" fill="#f4a6c1"/>
+        </g>
+
+        <!-- t-rex accessories (behind body: tail + back ridges peek out) -->
+        <g class="accessory accessory-trex">
+          <path d="M96,29 L102,9 L109,29 Z" fill="#4d8a3d"/>
+          <path d="M113,26 L120,4 L127,26 Z" fill="#4d8a3d"/>
+          <path d="M130,29 L136,10 L143,29 Z" fill="#4d8a3d"/>
+          <path d="M163,163 C189,168 206,184 197,201 C187,195 168,187 156,176 Z" fill="#6ea852"/>
+        </g>
+
+        <!-- unicorn accessories (behind body: mane + tail peek out) -->
+        <g class="accessory accessory-unicorn">
+          <path d="M60,48 C40,58 35,82 46,103 C35,92 26,72 36,52 C43,42 56,41 60,48 Z" fill="#f4a6c1"/>
+          <path d="M55,63 C39,74 36,97 49,115 C37,105 29,87 39,67 C46,58 55,58 55,63 Z" fill="#c9a6f4" opacity="0.9"/>
+          <path d="M150,152 C171,158 181,177 168,193 C179,181 182,161 165,150 C158,146 150,148 150,152 Z" fill="#f4a6c1"/>
+          <path d="M145,163 C164,171 171,188 157,201 C167,190 169,172 154,163 C149,160 145,160 145,163 Z" fill="#a6d8f4" opacity="0.9"/>
+        </g>
 
         <!-- body -->
         <path class="body-shape" d="M100,25 C150,25 178,65 178,112 C178,162 143,190 100,190 C57,190 22,162 22,112 C22,65 50,25 100,25 Z"/>
+
+        <!-- t-rex arms + feet (in front of body edge) -->
+        <g class="accessory accessory-trex">
+          <ellipse cx="38" cy="135" rx="10" ry="6" fill="#4d8a3d" transform="rotate(-20 38 135)"/>
+          <ellipse cx="162" cy="135" rx="10" ry="6" fill="#4d8a3d" transform="rotate(20 162 135)"/>
+        </g>
+
+        <!-- unicorn horn + ears -->
+        <g class="accessory accessory-unicorn">
+          <path d="M72,37 L61,12 L82,30 Z" fill="#fdf1f7"/>
+          <path d="M128,37 L139,12 L118,30 Z" fill="#fdf1f7"/>
+          <path d="M100,28 L94,2 L108,10 Z" fill="#ffd76a"/>
+          <path d="M97,20 L104,15" stroke="#e8a93a" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M96,13 L102,9" stroke="#e8a93a" stroke-width="1.5" stroke-linecap="round"/>
+        </g>
 
         <!-- dirt spots -->
         <ellipse class="dirt-spot" cx="60" cy="140" rx="10" ry="6" fill="#8a6a45" opacity="0.55"/>
@@ -338,6 +418,7 @@
   function defaultState() {
     return {
       name: null,
+      species: 'blob',
       hunger: 80,
       happiness: 80,
       energy: 80,
@@ -408,12 +489,17 @@
   var renameToggle = document.getElementById('rename-toggle');
   var renameForm = document.getElementById('rename-form');
   var renameInput = document.getElementById('rename-input');
+  var speciesButtons = Array.prototype.slice.call(document.querySelectorAll('.species-btn'));
 
   var state = loadState();
 
   function render() {
     var mood = getMood(state);
-    stage.className = 'stage mood-' + mood + (state.cleanliness < 35 ? ' dirty' : '');
+    stage.className = 'stage mood-' + mood + ' species-' + state.species + (state.cleanliness < 35 ? ' dirty' : '');
+
+    speciesButtons.forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.species === state.species);
+    });
 
     document.getElementById('bar-hunger').style.width = state.hunger + '%';
     document.getElementById('bar-happiness').style.width = state.happiness + '%';
@@ -489,6 +575,15 @@
     saveState();
     render();
     renameForm.classList.remove('visible');
+  });
+
+  speciesButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.species = btn.dataset.species;
+      saveState();
+      render();
+      flash();
+    });
   });
 
   tick();
