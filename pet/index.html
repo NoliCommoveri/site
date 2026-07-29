@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Immotus Pet — Prototype</title>
+<meta name="theme-color" content="#faf7f2">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #faf7f2;
+    --text: #2b2620;
+    --accent: #b5764a;
+    --muted: #6b6258;
+    --card: #ffffff;
+    --bar-track: #e7e0d6;
+    --hunger: #e08a4b;
+    --happiness: #e0b34b;
+    --energy: #4ba3e0;
+    --cleanliness: #4bc7a8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 1rem 3rem;
+  }
+  .app {
+    width: 100%;
+    max-width: 420px;
+  }
+  .name-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .rename-btn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0.25rem;
+  }
+  .rename-form {
+    display: none;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .rename-form.visible { display: flex; }
+  .rename-form input {
+    flex: 1;
+    padding: 0.6rem 0.8rem;
+    border-radius: 10px;
+    border: 1px solid var(--bar-track);
+    font-size: 1rem;
+  }
+  .rename-form button {
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+  }
+
+  .stage {
+    background: linear-gradient(180deg, #cdeaf7 0%, #eaf6ee 100%);
+    border-radius: 24px;
+    padding: 1.5rem 1rem 1rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #pet-svg {
+    display: block;
+    width: 70%;
+    max-width: 220px;
+    margin: 0 auto;
+    animation: bob 2.6s ease-in-out infinite;
+  }
+  .mood-happy #pet-svg { animation-duration: 1.3s; }
+  .mood-sad #pet-svg { animation: droop-bob 3.4s ease-in-out infinite; }
+  .mood-sleeping #pet-svg { animation: bob 4.5s ease-in-out infinite; opacity: 0.92; }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes droop-bob {
+    0%, 100% { transform: translateY(4px) rotate(0deg); }
+    50% { transform: translateY(8px) rotate(-1.5deg); }
+  }
+
+  .eye { transform-origin: center; animation: blink 4.2s ease-in-out infinite; }
+  .mood-sleeping .eye-open, .mood-sleeping .eye-highlight { display: none; }
+  .eye-closed { display: none; }
+  .mood-sleeping .eye-closed { display: block; }
+
+  @keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.1); }
+  }
+
+  .mouth { display: none; }
+  .mouth-neutral { display: block; }
+  .mood-happy .mouth-neutral, .mood-sad .mouth-neutral, .mood-sleeping .mouth-neutral { display: none; }
+  .mood-happy .mouth-happy { display: block; }
+  .mood-sad .mouth-sad { display: block; }
+  .mood-sleeping .mouth-sleeping { display: block; }
+
+  .body-shape { fill: url(#bodyGradient); transition: filter 0.4s ease; }
+  .mood-sad .body-shape { filter: grayscale(35%) brightness(0.95); }
+
+  .dirt-spot { display: none; }
+  .dirty .dirt-spot { display: block; }
+
+  .zzz { display: none; }
+  .mood-sleeping .zzz { display: block; animation: float-up 2.4s ease-in-out infinite; }
+  @keyframes float-up {
+    0% { transform: translate(0, 0); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translate(10px, -22px); opacity: 0; }
+  }
+
+  .sparkle { display: none; }
+  .mood-happy .sparkle { display: block; animation: sparkle-pop 1.3s ease-in-out infinite; }
+  @keyframes sparkle-pop {
+    0%, 100% { opacity: 0; transform: scale(0.6); }
+    50% { opacity: 1; transform: scale(1); }
+  }
+
+  .action-flash { animation: flash-pop 0.5s ease; }
+  @keyframes flash-pop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  .status {
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin: 0.75rem 0 0.25rem;
+    min-height: 1.3em;
+  }
+
+  .stats {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr 2.5rem;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+  }
+  .stat-icon { text-align: center; }
+  .bar-track {
+    background: var(--bar-track);
+    border-radius: 999px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s ease;
+  }
+  .stat-value { text-align: right; color: var(--muted); }
+
+  .actions {
+    margin-top: 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  button.action {
+    min-height: 64px;
+    border: none;
+    border-radius: 16px;
+    background: var(--accent);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button.action:active { transform: scale(0.97); }
+  button.action:disabled {
+    background: var(--bar-track);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+  button.action .emoji { font-size: 1.3rem; }
+
+  .note {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 1.25rem;
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="name-row">
+      <h1 id="pet-name-display">Widget</h1>
+      <button class="rename-btn" id="rename-toggle" aria-label="Rename pet">✏️</button>
+    </div>
+    <form class="rename-form" id="rename-form">
+      <input type="text" id="rename-input" maxlength="16" placeholder="Pet's name">
+      <button type="submit">Save</button>
+    </form>
+
+    <div class="stage" id="stage">
+      <svg id="pet-svg" viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="bodyGradient" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#c8f2e0"/>
+            <stop offset="100%" stop-color="#5fb8a6"/>
+          </radialGradient>
+        </defs>
+
+        <!-- antennae -->
+        <line x1="75" y1="35" x2="65" y2="10" stroke="#5fb8a6" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="65" cy="10" r="5" fill="#f4a6c1"/>
+        <line x1="125" y1="35" x2="135" y2="10" stroke="#5fb8a6" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="135" cy="10" r="5" fill="#f4a6c1"/>
+
+        <!-- body -->
+        <path class="body-shape" d="M100,25 C150,25 178,65 178,112 C178,162 143,190 100,190 C57,190 22,162 22,112 C22,65 50,25 100,25 Z"/>
+
+        <!-- dirt spots -->
+        <ellipse class="dirt-spot" cx="60" cy="140" rx="10" ry="6" fill="#8a6a45" opacity="0.55"/>
+        <ellipse class="dirt-spot" cx="130" cy="150" rx="8" ry="5" fill="#8a6a45" opacity="0.45"/>
+
+        <!-- cheeks -->
+        <ellipse cx="60" cy="120" rx="12" ry="8" fill="#ffb6c1" opacity="0.6"/>
+        <ellipse cx="140" cy="120" rx="12" ry="8" fill="#ffb6c1" opacity="0.6"/>
+
+        <!-- eyes -->
+        <g class="eye eye-open">
+          <circle cx="78" cy="100" r="9" fill="#2b2620"/>
+          <circle cx="122" cy="100" r="9" fill="#2b2620"/>
+          <circle class="eye-highlight" cx="81" cy="97" r="2.5" fill="#fff"/>
+          <circle class="eye-highlight" cx="125" cy="97" r="2.5" fill="#fff"/>
+        </g>
+        <g class="eye-closed">
+          <path d="M70,100 Q78,106 86,100" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M114,100 Q122,106 130,100" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </g>
+
+        <!-- mouths -->
+        <path class="mouth mouth-neutral" d="M90,128 Q100,133 110,128" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path class="mouth mouth-happy" d="M84,124 Q100,144 116,124" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path class="mouth mouth-sad" d="M86,134 Q100,120 114,134" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path class="mouth mouth-sleeping" d="M92,128 Q100,131 108,128" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+        <!-- sparkles -->
+        <text class="sparkle" x="30" y="70" font-size="18">✨</text>
+        <text class="sparkle" x="150" y="60" font-size="14">✨</text>
+
+        <!-- zzz -->
+        <text class="zzz" x="140" y="55" font-size="20" fill="#6b6258">Z</text>
+      </svg>
+    </div>
+
+    <p class="status" id="status-text"></p>
+
+    <div class="stats">
+      <div class="stat-row">
+        <span class="stat-icon">🍎</span>
+        <span class="bar-track"><span class="bar-fill" id="bar-hunger" style="background: var(--hunger);"></span></span>
+        <span class="stat-value" id="val-hunger">–</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-icon">😊</span>
+        <span class="bar-track"><span class="bar-fill" id="bar-happiness" style="background: var(--happiness);"></span></span>
+        <span class="stat-value" id="val-happiness">–</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-icon">⚡</span>
+        <span class="bar-track"><span class="bar-fill" id="bar-energy" style="background: var(--energy);"></span></span>
+        <span class="stat-value" id="val-energy">–</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-icon">🧼</span>
+        <span class="bar-track"><span class="bar-fill" id="bar-cleanliness" style="background: var(--cleanliness);"></span></span>
+        <span class="stat-value" id="val-cleanliness">–</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="action" id="btn-feed"><span class="emoji">🍎</span> Feed</button>
+      <button class="action" id="btn-play"><span class="emoji">🎾</span> Play</button>
+      <button class="action" id="btn-clean"><span class="emoji">🧼</span> Clean</button>
+      <button class="action" id="btn-sleep"><span class="emoji">🌙</span> <span id="sleep-label">Sleep</span></button>
+    </div>
+
+    <p class="note">Your pet's care is saved on this device.</p>
+  </div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'immotus-pet-v1';
+
+  // Points lost per real hour while awake; sleep pauses/slows most of these
+  // so a nap is a deliberate way to protect stats, not free healing.
+  var DECAY_PER_HOUR = { hunger: 18, happiness: 12, cleanliness: 9, energy: 8 };
+  var SLEEP_ENERGY_REGEN_PER_HOUR = 30;
+
+  function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+  function defaultState() {
+    return {
+      name: null,
+      hunger: 80,
+      happiness: 80,
+      energy: 80,
+      cleanliness: 80,
+      sleeping: false,
+      lastUpdated: Date.now()
+    };
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      return Object.assign(defaultState(), parsed);
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function applyDecay(s) {
+    var now = Date.now();
+    var hours = (now - s.lastUpdated) / 3600000;
+    if (hours <= 0) return s;
+
+    if (s.sleeping) {
+      s.energy = clamp(s.energy + hours * SLEEP_ENERGY_REGEN_PER_HOUR);
+      s.hunger = clamp(s.hunger - hours * DECAY_PER_HOUR.hunger * 0.5);
+      s.cleanliness = clamp(s.cleanliness - hours * DECAY_PER_HOUR.cleanliness * 0.3);
+    } else {
+      s.hunger = clamp(s.hunger - hours * DECAY_PER_HOUR.hunger);
+      s.happiness = clamp(s.happiness - hours * DECAY_PER_HOUR.happiness);
+      s.cleanliness = clamp(s.cleanliness - hours * DECAY_PER_HOUR.cleanliness);
+      s.energy = clamp(s.energy - hours * DECAY_PER_HOUR.energy);
+    }
+    s.lastUpdated = now;
+    return s;
+  }
+
+  function getMood(s) {
+    if (s.sleeping) return 'sleeping';
+    var min = Math.min(s.hunger, s.happiness, s.energy);
+    if (min < 20) return 'sad';
+    var avg = (s.hunger + s.happiness + s.energy + s.cleanliness) / 4;
+    if (avg >= 70) return 'happy';
+    return 'neutral';
+  }
+
+  var STATUS_MESSAGES = {
+    sleeping: 'Zzz... sleeping soundly.',
+    sad: 'Needs some care!',
+    happy: 'Feeling great!',
+    neutral: 'Doing okay.'
+  };
+
+  var stage = document.getElementById('stage');
+  var statusText = document.getElementById('status-text');
+  var nameDisplay = document.getElementById('pet-name-display');
+  var btnFeed = document.getElementById('btn-feed');
+  var btnPlay = document.getElementById('btn-play');
+  var btnClean = document.getElementById('btn-clean');
+  var btnSleep = document.getElementById('btn-sleep');
+  var sleepLabel = document.getElementById('sleep-label');
+  var renameToggle = document.getElementById('rename-toggle');
+  var renameForm = document.getElementById('rename-form');
+  var renameInput = document.getElementById('rename-input');
+
+  var state = loadState();
+
+  function render() {
+    var mood = getMood(state);
+    stage.className = 'stage mood-' + mood + (state.cleanliness < 35 ? ' dirty' : '');
+
+    document.getElementById('bar-hunger').style.width = state.hunger + '%';
+    document.getElementById('bar-happiness').style.width = state.happiness + '%';
+    document.getElementById('bar-energy').style.width = state.energy + '%';
+    document.getElementById('bar-cleanliness').style.width = state.cleanliness + '%';
+
+    document.getElementById('val-hunger').textContent = Math.round(state.hunger);
+    document.getElementById('val-happiness').textContent = Math.round(state.happiness);
+    document.getElementById('val-energy').textContent = Math.round(state.energy);
+    document.getElementById('val-cleanliness').textContent = Math.round(state.cleanliness);
+
+    statusText.textContent = STATUS_MESSAGES[mood];
+    nameDisplay.textContent = state.name || 'Widget';
+
+    sleepLabel.textContent = state.sleeping ? 'Wake' : 'Sleep';
+    btnFeed.disabled = state.sleeping;
+    btnPlay.disabled = state.sleeping;
+    btnClean.disabled = state.sleeping;
+  }
+
+  function tick() {
+    applyDecay(state);
+    saveState();
+    render();
+  }
+
+  function flash() {
+    var svg = document.getElementById('pet-svg');
+    svg.classList.remove('action-flash');
+    // force reflow so the animation can restart on repeated taps
+    void svg.offsetWidth;
+    svg.classList.add('action-flash');
+  }
+
+  function doAction(fn) {
+    return function () {
+      applyDecay(state);
+      fn();
+      saveState();
+      render();
+      flash();
+    };
+  }
+
+  btnFeed.addEventListener('click', doAction(function () {
+    state.hunger = clamp(state.hunger + 25);
+  }));
+
+  btnPlay.addEventListener('click', doAction(function () {
+    state.happiness = clamp(state.happiness + 20);
+    state.energy = clamp(state.energy - 10);
+    state.hunger = clamp(state.hunger - 5);
+  }));
+
+  btnClean.addEventListener('click', doAction(function () {
+    state.cleanliness = 100;
+  }));
+
+  btnSleep.addEventListener('click', doAction(function () {
+    state.sleeping = !state.sleeping;
+  }));
+
+  renameToggle.addEventListener('click', function () {
+    renameInput.value = state.name || '';
+    renameForm.classList.toggle('visible');
+    if (renameForm.classList.contains('visible')) renameInput.focus();
+  });
+
+  renameForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var trimmed = renameInput.value.trim();
+    state.name = trimmed || null;
+    saveState();
+    render();
+    renameForm.classList.remove('visible');
+  });
+
+  tick();
+  setInterval(tick, 15000);
+})();
+</script>
+</body>
+</html>
