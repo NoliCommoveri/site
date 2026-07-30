@@ -149,7 +149,8 @@
   .species-hippocampus #pet-sprite,
   .species-pegasus #pet-sprite,
   .species-phoenix #pet-sprite,
-  .species-griffin #pet-sprite { display: block; }
+  .species-griffin #pet-sprite,
+  .species-dragon #pet-sprite { display: block; }
   /* Idle-bob rate reads as breathing, so it applies to real pose art too. */
   .mood-happy .pet-visual { animation-duration: 1.3s; }
   .mood-sleeping .pet-visual { animation: bob 4.5s ease-in-out infinite; }
@@ -329,6 +330,7 @@
         <button class="species-btn" data-species="hippocampus"><span class="emoji">🌊</span> Hippocampus</button>
         <button class="species-btn" data-species="phoenix"><span class="emoji">🔥</span> Phoenix</button>
         <button class="species-btn" data-species="griffin"><span class="emoji">🦅</span> Griffin</button>
+        <button class="species-btn" data-species="dragon"><span class="emoji">🐉</span> Dragon</button>
       </div>
     </div>
 
@@ -526,7 +528,8 @@
     pegasus: { idle: 'assets/pegasus.png' },
     hippocampus: { idle: 'assets/hippocampus.png' },
     phoenix: { idle: 'assets/phoenix.png' },
-    griffin: { idle: 'assets/griffin.png' }
+    griffin: { idle: 'assets/griffin.png' },
+    dragon: { idle: 'assets/dragon.png' }
   };
 
   // Where each pose degrades to when its art hasn't been drawn yet. Every
