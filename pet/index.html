@@ -102,6 +102,33 @@
     gap: 0.5rem;
     margin-bottom: 1rem;
   }
+
+  .variant-row {
+    display: none;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0.6rem 0 0.25rem;
+  }
+  .variant-row.visible { display: flex; }
+  .variant-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--bar-track);
+    cursor: pointer;
+    padding: 0;
+    background: var(--swatch, var(--card));
+  }
+  .variant-btn.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent) inset;
+  }
+  .variant-btn.variant-base {
+    background: var(--card);
+    color: var(--muted);
+    font-size: 0.8rem;
+    line-height: 1;
+  }
   .species-btn {
     display: flex;
     align-items: center;
@@ -396,6 +423,8 @@
       <span class="zzz">Z</span>
     </div>
 
+    <div class="variant-row" id="variant-row"></div>
+
     <p class="status" id="status-text"></p>
 
     <div class="stats">
@@ -449,6 +478,9 @@
       // Chosen once at launch and then locked — see SPEC.md "Species
       // selection" for the future points-gated switching plan.
       species: null,
+      // 'base' = the art's original ship colors. See COLOR_VARIANTS below —
+      // only species listed there offer anything else.
+      colorVariant: 'base',
       hunger: 80,
       happiness: 80,
       energy: 80,
@@ -601,6 +633,110 @@
     return { pose: name, src: set[name], exact: name === wanted };
   }
 
+  // --- Color variants ------------------------------------------------------
+  //
+  // Test case for SPEC.md §5 "Color/variation at species selection": a
+  // hue-rotate filter was tried and rejected there because it shifts every
+  // pixel, including parts that shouldn't move with the primary body color
+  // (the unicorn's gold hooves/horn shifting with its mane). Instead each
+  // variant is a small { source hex -> replacement hex } map covering only
+  // the palette entries that make up the primary body color, remapped on an
+  // offscreen canvas and cached — the tan/cream belly and every other
+  // palette entry pass through untouched.
+  //
+  // T-Rex only, as a trial before rolling this out to the rest of the
+  // roster. Its 20-color palette (reference/trex-palette.txt) splits cleanly
+  // into a 7-color green body/outline ramp and a 13-color tan/cream belly
+  // ramp; each variant below remaps just the green ramp, hue-rotated to a
+  // new hue at matching lightness/saturation so the value steps (shadow →
+  // highlight) stay intact.
+  var COLOR_VARIANTS = {
+    trex: {
+      blue: {
+        swatch: '#2b73aa',
+        map: {
+          '#262e18': '#18242e',
+          '#82aa2b': '#2b73aa',
+          '#476719': '#194567',
+          '#79a128': '#286da1',
+          '#708b26': '#265f8b',
+          '#acc03e': '#3e88c0',
+          '#6f9725': '#256697'
+        }
+      },
+      crimson: {
+        swatch: '#aa2b3c',
+        map: {
+          '#262e18': '#2e181b',
+          '#82aa2b': '#aa2b3c',
+          '#476719': '#671923',
+          '#79a128': '#a12838',
+          '#708b26': '#8b2633',
+          '#acc03e': '#c03e4f',
+          '#6f9725': '#972534'
+        }
+      }
+    }
+  };
+
+  function hexToRgb(hex) {
+    var v = parseInt(hex.slice(1), 16);
+    return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 };
+  }
+
+  // src+variant -> data URL of the recolored sprite. Populated lazily the
+  // first time a given (pose art, variant) pair is needed.
+  var recolorCache = {};
+
+  function requestRecolor(src, variant, map, onReady) {
+    var key = src + '|' + variant;
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var px = imageData.data;
+      var lut = {};
+      Object.keys(map).forEach(function (fromHex) {
+        var from = hexToRgb(fromHex);
+        lut[from.r + ',' + from.g + ',' + from.b] = hexToRgb(map[fromHex]);
+      });
+      for (var i = 0; i < px.length; i += 4) {
+        if (px[i + 3] === 0) continue; // leave transparent background alone
+        var to = lut[px[i] + ',' + px[i + 1] + ',' + px[i + 2]];
+        if (to) {
+          px[i] = to.r;
+          px[i + 1] = to.g;
+          px[i + 2] = to.b;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      recolorCache[key] = canvas.toDataURL('image/png');
+      onReady(recolorCache[key]);
+    };
+    img.src = src;
+  }
+
+  // Returns what the <img> should actually show for this pose: the plain
+  // pose art for 'base' (or a species with no variants defined), or the
+  // cached recolor once it's ready. Kicks off the (async) recolor on a
+  // cache miss and falls back to the base art until it resolves, at which
+  // point the onReady callback re-renders to pick up the cached result.
+  function resolveDisplaySrc(species, src) {
+    var variants = COLOR_VARIANTS[species];
+    var variant = state.colorVariant;
+    if (!src || !variants || !variant || variant === 'base') return src;
+    var entry = variants[variant];
+    if (!entry) return src;
+    var key = src + '|' + variant;
+    if (recolorCache[key]) return recolorCache[key];
+    requestRecolor(src, variant, entry.map, function () { render(); });
+    return src;
+  }
+
   var speciesPicker = document.getElementById('species-picker');
   var appBody = document.getElementById('app-body');
   var stage = document.getElementById('stage');
@@ -616,6 +752,7 @@
   var renameForm = document.getElementById('rename-form');
   var renameInput = document.getElementById('rename-input');
   var speciesButtons = Array.prototype.slice.call(document.querySelectorAll('.species-btn'));
+  var variantRow = document.getElementById('variant-row');
 
   var state = loadState();
 
@@ -630,6 +767,49 @@
     var match = /[?&]pose=([a-z]+)/.exec(window.location.search);
     return match && POSE_FALLBACK.hasOwnProperty(match[1]) ? match[1] : null;
   })();
+
+  // Builds the swatch row once per species (rebuilding only when the
+  // species changes), then just updates which button reads as active.
+  function renderVariantPicker() {
+    var variants = COLOR_VARIANTS[state.species];
+    if (!variants) {
+      variantRow.classList.remove('visible');
+      variantRow.innerHTML = '';
+      variantRow.dataset.builtFor = '';
+      return;
+    }
+    variantRow.classList.add('visible');
+    if (variantRow.dataset.builtFor !== state.species) {
+      variantRow.innerHTML = '';
+      var baseBtn = document.createElement('button');
+      baseBtn.type = 'button';
+      baseBtn.className = 'variant-btn variant-base';
+      baseBtn.dataset.variant = 'base';
+      baseBtn.title = 'Original colors';
+      baseBtn.textContent = '↺';
+      variantRow.appendChild(baseBtn);
+      Object.keys(variants).forEach(function (name) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'variant-btn';
+        btn.dataset.variant = name;
+        btn.style.setProperty('--swatch', variants[name].swatch);
+        btn.title = name;
+        variantRow.appendChild(btn);
+      });
+      variantRow.dataset.builtFor = state.species;
+      Array.prototype.slice.call(variantRow.querySelectorAll('.variant-btn')).forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          state.colorVariant = btn.dataset.variant;
+          saveState();
+          render();
+        });
+      });
+    }
+    Array.prototype.slice.call(variantRow.querySelectorAll('.variant-btn')).forEach(function (btn) {
+      btn.classList.toggle('active', (state.colorVariant || 'base') === btn.dataset.variant);
+    });
+  }
 
   function showActionPose(pose) {
     actionPose = pose;
@@ -667,8 +847,9 @@
       ' pose-' + art.pose + (art.exact ? '' : ' pose-fallback') +
       (state.cleanliness < 35 ? ' dirty' : '');
 
-    if (art.src && petSprite.getAttribute('src') !== art.src) {
-      petSprite.src = art.src;
+    var displaySrc = resolveDisplaySrc(state.species, art.src);
+    if (displaySrc && petSprite.getAttribute('src') !== displaySrc) {
+      petSprite.src = displaySrc;
     }
     if (art.src) {
       petSprite.alt = (state.name || 'Your pet') + ' the ' + state.species +
@@ -678,6 +859,8 @@
     speciesButtons.forEach(function (btn) {
       btn.classList.toggle('active', btn.dataset.species === state.species);
     });
+
+    renderVariantPicker();
 
     document.getElementById('bar-hunger').style.width = state.hunger + '%';
     document.getElementById('bar-happiness').style.width = state.happiness + '%';
