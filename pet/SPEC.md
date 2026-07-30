@@ -202,6 +202,17 @@ still holds. `reference/pegasus-reference-4x.png` now holds all three
 poses (idle/happy/sad, 4x) and is what gets attached when generating
 `sleep` next, the last pose in the required tier.
 
+`pegasus-sleep.png` completed the required tier. The same fixed-threshold
+border flood fill used for `sad` carried over cleanly here (no gradient
+leak this time either). Curled poses scale by *width*, not height, per the
+same reasoning as `trex-sleep`/`dragon-sleep`: this pose's raw silhouette
+already landed at 80.3% width fill without any correction needed, scaled
+to 104px wide (81.25%, matching `trex-sleep`'s 81.2% almost exactly) and
+placed on the same bottom row (117) as the other three poses. `pegasus`
+now has all four required poses. `reference/pegasus-reference-4x.png`
+holds all four (idle/happy/sad/sleep, 4x) and is what gets attached when
+generating `pegasus`'s action poses next.
+
 The remaining placeholder stills (hippocampus, phoenix, griffin) still
 predate these rules — 471–640px, anti-aliased, gradient-shaded, and
 inconsistent in camera angle — and are out of scope here.
