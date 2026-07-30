@@ -126,9 +126,14 @@ scale had to be independently derived and verified per step 4 below rather
 than inherited from a shared crop window — it landed on the exact same
 top/bottom rows as idle (13–116, 104px tall) with no adjustment needed, and
 was quantized onto the *locked* `dragon-palette.txt` rather than a new ramp.
-`reference/dragon-reference-4x.png` (both poses, 4x) now exists to attach
-when generating `dragon`'s next poses, replacing the single-pose reference
-used to generate `happy`.
+
+`dragon-sad.png` followed the same process — generated on its own attaching
+the (by then two-pose) reference, independently scaled and ghost-overlay
+verified against idle (again landed on rows 13–116 with no adjustment),
+quantized onto the locked palette. `reference/dragon-reference-4x.png` now
+holds all three poses (idle/happy/sad, 4x), mirroring
+`trex-reference-4x.png`'s three-cell layout, and is what gets attached when
+generating `dragon`'s next pose.
 
 The other five stills still predate these rules — they're 471–640px,
 anti-aliased, gradient-shaded, and inconsistent in camera angle (the griffin
