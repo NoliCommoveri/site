@@ -537,10 +537,33 @@ this doc, so they're excluded from that plan):
   keyframes themselves (`shake-light`/`-medium`/`-big`) are `infinite`
   loops, so they keep shaking for the full length of whichever stage
   applies them.
-- ⬜ Unicorn, pegasus, hippocampus, dragon — no hatch art yet; picking
-  these species still skips straight to instant pet creation. Remaining
-  work is art-only (four frames each), no further code changes needed
-  beyond their `HATCH_SEQUENCES` entry.
+- ✅ Dragon — full 4-frame set drawn and wired (2026-07-30, ported from
+  `NoliCommoveri/Critteria`, which now owns active development on this
+  feature). Generated as a single 4-panel sheet (egg/crack1/crack2/hatch
+  together) rather than one-off calls, which kept scale and ground line
+  consistent across frames. Departs from the T-Rex frames in one
+  deliberate way: instead of a dirt nest, the egg sits on **a bed of
+  glowing hot coals/embers**, matching the "fire dragon" framing. Coal
+  needed its own small 6-colour sub-ramp
+  (`reference/dragon-hatch-coal-palette.txt`/`.png`) layered on top of the
+  locked `dragon-palette.txt`, which is otherwise entirely purple/blue.
+  Building this also surfaced a real gap in the locked dragon ramp: every
+  other species' palette has a near-white top value for highlights/eye-
+  whites but dragon's lightest entry was a saturated light blue
+  (`#b3d5f6`) — fixed by adding `#eae4fa` (pale lavender-white) as a 20th
+  entry to `dragon-palette.txt`. Reference-only file, not loaded at
+  runtime, so this didn't touch any shipped sprite. Baseline registration
+  matches the rest of the dragon family (top row 13, bottom row 116 —
+  `dragon.png`/`-happy`/`-sad`/`-sleep`'s own ground line) rather than the
+  T-Rex family's row-117 baseline; the two species' egg sets aren't
+  required to share a ground line with each other, only internally with
+  their own species' poses. `reference/dragon-egg-reference-4x.png` holds
+  all four hatch frames (4x) for attaching when generating dragon's action
+  poses next.
+- ⬜ Unicorn, pegasus, hippocampus — no hatch art yet; picking these
+  species still skips straight to instant pet creation. Remaining work is
+  art-only (four frames each), no further code changes needed beyond
+  their `HATCH_SEQUENCES` entry.
 
 ### Species selection
 Species is picked once, at first launch, and then locked for the life of
