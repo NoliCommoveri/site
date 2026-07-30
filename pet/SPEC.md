@@ -178,9 +178,22 @@ a ghost-overlay check before cleanup, not just assumed. Quantized onto the
 locked `hippocampus-palette.txt` rather than a new ramp; all 10 colours got
 used, nothing fell off-palette.
 
+`hippocampus-sad.png` followed the same process: generated on its own
+attaching the two-pose reference, asked to name the stance explicitly
+(standing, weight back, head/ears lowered, tail coiled low, eyes
+half-closed) rather than left to default to lying down. Registration held —
+landed one pixel off idle/happy's horizontal placement (x=30 vs 31, both
+top row 13) — but cleanup hit a real bug the first pass: the crop was taken
+from the pre-key RGB image instead of the post-key RGBA one, so the magenta
+margin inside the crop box came through fully opaque and quantized into a
+visible teal rectangle behind the creature. Re-run correctly (key to alpha
+*before* cropping, exactly as idle/happy did), it quantized cleanly onto
+all 10 locked palette colours with no rectangle. Worth watching for on
+future poses since it's an easy step to skip by accident.
+
 `reference/hippocampus-reference-4x.png` is a growing sheet (currently
-1024×512, idle then happy at 4x each) and is what gets attached when
-generating the remaining two required poses.
+1536×512, idle/happy/sad at 4x each) and is what gets attached when
+generating the remaining required pose, `sleep`.
 
 The griffin, pegasus, and phoenix stills predate these rules — they're
 471–640px, anti-aliased, gradient-shaded, and inconsistent in camera angle
