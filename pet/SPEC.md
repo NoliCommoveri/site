@@ -254,7 +254,16 @@ ground line moving 14%.
 
 Instead, treat a cleaned `idle` as canonical and **attach it as a reference
 image, requesting 1–2 poses per call**, stating explicitly that canvas, scale,
-and ground line must match the reference. Also:
+and ground line must match the reference.
+
+Attach `pet/assets/reference/trex-reference-4x.png`, not the 128×128 asset —
+it's the same two poses at 4× nearest-neighbour (1024×512), so the pixel grid
+is unambiguous to the generator and both poses together demonstrate what
+"same character, same ground line" means. `reference/` holds generation aids
+only; nothing in it is loaded at runtime. `trex-palette.png` and
+`trex-palette.txt` are the 20 colours of the current T-Rex ramp.
+
+Also: 
 
 - Say **"creature only — no food, no props, no grass, no ground, no shadow"**.
 - Ask for a flat **magenta `#FF00FF` background** rather than transparency.
