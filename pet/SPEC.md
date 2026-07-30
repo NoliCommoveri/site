@@ -11,8 +11,10 @@ A Tamagotchi-style virtual pet app for four siblings, built as a web app/PWA
   while the tablet is closed.
 - Actions: Feed, Play, Clean, Sleep.
 - Species picker: real AI-generated pixel-art stills for T-Rex, unicorn,
-  pegasus, and hippocampus (`pet/assets/`); slime/blob is still placeholder
-  SVG art — see Art pipeline below.
+  pegasus, hippocampus, phoenix, and griffin (`pet/assets/`); slime/blob is
+  still placeholder SVG art — see Art pipeline below. Species is chosen
+  once at first launch and then locked for that pet — see Species selection
+  below.
 - Mood-driven visual states (happy/neutral/sad/sleeping/dirty) via CSS, no
   hand animation required.
 - `localStorage` persistence.
@@ -97,6 +99,21 @@ decay — no cron needed). v1: time-gated only. Later enhancement: also
 require a minimum average care score to advance, so pure neglect doesn't
 still age the pet up — deliberately deferred since it adds complexity kids
 may find punishing/confusing at first.
+
+### Species selection
+Species is picked once, at first launch, and then locked for the life of
+that pet — `pet/index.html` shows a dedicated "Choose your pet!" screen
+when no species is stored yet, and once one is picked the picker is hidden
+and the choice is written to `localStorage` (and later, `pets.species` in
+D1) permanently. Kids don't get a species switcher in the main app.
+
+This is deliberately not user-switchable yet. A later phase can add a
+gated way to change species post-creation (e.g., unlocked via a care
+streak or points threshold, mirroring the accessory-unlock mechanic
+below) rather than leaving it freely swappable, which would undercut the
+"raising one pet" framing. The one-time-pick guard in `index.html` is a
+single `if (state.species) return;` check in the species button handler —
+swap that for the real gating condition when this ships.
 
 ### Accessories
 Equip via `pet_equipped_items`. Rendered as image overlays positioned per

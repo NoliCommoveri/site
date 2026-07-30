@@ -79,6 +79,22 @@
     font-weight: 600;
   }
 
+  .species-picker {
+    display: none;
+    text-align: center;
+    padding: 1rem 0 0.5rem;
+  }
+  .picker-title {
+    margin-bottom: 0.35rem;
+  }
+  .picker-hint {
+    margin: 0 0 1rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .app-body { display: none; }
+
   .species-row {
     display: flex;
     flex-wrap: wrap;
@@ -127,7 +143,9 @@
   .species-trex #pet-sprite,
   .species-unicorn #pet-sprite,
   .species-hippocampus #pet-sprite,
-  .species-pegasus #pet-sprite { display: block; }
+  .species-pegasus #pet-sprite,
+  .species-phoenix #pet-sprite,
+  .species-griffin #pet-sprite { display: block; }
   .mood-happy .pet-visual { animation-duration: 1.3s; }
   .mood-sad .pet-visual { animation: droop-bob 3.4s ease-in-out infinite; }
   .mood-sleeping .pet-visual { animation: bob 4.5s ease-in-out infinite; opacity: 0.92; }
@@ -285,6 +303,21 @@
 </head>
 <body>
   <div class="app">
+    <div class="species-picker" id="species-picker">
+      <h1 class="picker-title">Choose your pet!</h1>
+      <p class="picker-hint">Pick carefully — this is who you'll be raising.</p>
+      <div class="species-row" id="species-row">
+        <button class="species-btn" data-species="blob"><span class="emoji">🟢</span> Slime</button>
+        <button class="species-btn" data-species="trex"><span class="emoji">🦖</span> T-Rex</button>
+        <button class="species-btn" data-species="unicorn"><span class="emoji">🦄</span> Unicorn</button>
+        <button class="species-btn" data-species="pegasus"><span class="emoji">🪽</span> Pegasus</button>
+        <button class="species-btn" data-species="hippocampus"><span class="emoji">🌊</span> Hippocampus</button>
+        <button class="species-btn" data-species="phoenix"><span class="emoji">🔥</span> Phoenix</button>
+        <button class="species-btn" data-species="griffin"><span class="emoji">🦅</span> Griffin</button>
+      </div>
+    </div>
+
+    <div class="app-body" id="app-body">
     <div class="name-row">
       <h1 id="pet-name-display">Widget</h1>
       <button class="rename-btn" id="rename-toggle" aria-label="Rename pet">✏️</button>
@@ -293,14 +326,6 @@
       <input type="text" id="rename-input" maxlength="16" placeholder="Pet's name">
       <button type="submit">Save</button>
     </form>
-
-    <div class="species-row" id="species-row">
-      <button class="species-btn" data-species="blob"><span class="emoji">🟢</span> Slime</button>
-      <button class="species-btn" data-species="trex"><span class="emoji">🦖</span> T-Rex</button>
-      <button class="species-btn" data-species="unicorn"><span class="emoji">🦄</span> Unicorn</button>
-      <button class="species-btn" data-species="pegasus"><span class="emoji">🪽</span> Pegasus</button>
-      <button class="species-btn" data-species="hippocampus"><span class="emoji">🌊</span> Hippocampus</button>
-    </div>
 
     <div class="stage" id="stage">
       <svg id="pet-svg" class="pet-visual" viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
@@ -387,6 +412,7 @@
     </div>
 
     <p class="note">Your pet's care is saved on this device.</p>
+    </div>
   </div>
 
 <script>
@@ -403,7 +429,9 @@
   function defaultState() {
     return {
       name: null,
-      species: 'blob',
+      // Chosen once at launch and then locked — see SPEC.md "Species
+      // selection" for the future points-gated switching plan.
+      species: null,
       hunger: 80,
       happiness: 80,
       energy: 80,
@@ -467,9 +495,13 @@
     trex: 'assets/trex.png',
     unicorn: 'assets/unicorn.png',
     pegasus: 'assets/pegasus.png',
-    hippocampus: 'assets/hippocampus.png'
+    hippocampus: 'assets/hippocampus.png',
+    phoenix: 'assets/phoenix.png',
+    griffin: 'assets/griffin.png'
   };
 
+  var speciesPicker = document.getElementById('species-picker');
+  var appBody = document.getElementById('app-body');
   var stage = document.getElementById('stage');
   var petSprite = document.getElementById('pet-sprite');
   var statusText = document.getElementById('status-text');
@@ -487,6 +519,14 @@
   var state = loadState();
 
   function render() {
+    if (!state.species) {
+      speciesPicker.style.display = 'block';
+      appBody.style.display = 'none';
+      return;
+    }
+    speciesPicker.style.display = 'none';
+    appBody.style.display = 'block';
+
     var mood = getMood(state);
     stage.className = 'stage mood-' + mood + ' species-' + state.species + (state.cleanliness < 35 ? ' dirty' : '');
 
@@ -577,6 +617,9 @@
 
   speciesButtons.forEach(function (btn) {
     btn.addEventListener('click', function () {
+      // One-time pick: species is locked in once chosen. A future unlock
+      // mechanism (see SPEC.md) can lift this guard to allow re-picking.
+      if (state.species) return;
       state.species = btn.dataset.species;
       saveState();
       render();
