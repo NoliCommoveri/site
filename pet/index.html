@@ -466,9 +466,12 @@
   var STORAGE_KEY = 'immotus-pet-v1';
 
   // Points lost per real hour while awake; sleep pauses/slows most of these
-  // so a nap is a deliberate way to protect stats, not free healing.
-  var DECAY_PER_HOUR = { hunger: 18, happiness: 12, cleanliness: 9, energy: 8 };
-  var SLEEP_ENERGY_REGEN_PER_HOUR = 30;
+  // so a nap is a deliberate way to protect stats, not free healing. Tuned so
+  // a toddler-length gap (a few hours between check-ins) still leaves the pet
+  // clearly needing care but nowhere near the sad threshold, and a short nap
+  // visibly recovers energy rather than requiring hours of real time.
+  var DECAY_PER_HOUR = { hunger: 10, happiness: 7, cleanliness: 5, energy: 4 };
+  var SLEEP_ENERGY_REGEN_PER_HOUR = 120;
 
   function clamp(v) { return Math.max(0, Math.min(100, v)); }
 
@@ -1117,8 +1120,8 @@
 
   btnPlay.addEventListener('click', doAction('play', function () {
     state.happiness = clamp(state.happiness + 20);
-    state.energy = clamp(state.energy - 10);
-    state.hunger = clamp(state.hunger - 5);
+    state.energy = clamp(state.energy - 3);
+    state.hunger = clamp(state.hunger - 2);
   }));
 
   btnClean.addEventListener('click', doAction('clean', function () {
