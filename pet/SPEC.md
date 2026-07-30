@@ -176,6 +176,32 @@ mapped onto an existing palette entry with no new colours and no stray
 near-black. `reference/pegasus-reference-4x.png` now holds both poses
 (idle/happy, 4x) and is what gets attached when generating `sad` next.
 
+`pegasus-sad.png` needed a real fix mid-pipeline, not just a scale
+judgment call: the border flood fill (adaptive per-step colour-distance,
+the method that had worked cleanly for idle and happy) tunnelled through
+a smooth highlight gradient on the body and ate most of the interior,
+leaving only outline strokes — visible immediately as a speckled,
+mostly-transparent result once quantized. Root cause was the same one the
+cleanup pass's step 2 already warns about for outline gaps: an adaptive
+neighbour-distance rule has no fixed floor, so a long enough chain of
+small steps crosses the whole body. Fixed by reclassifying background with
+a fixed rule (green channel < 55, since magenta's is ~0–4 and every body
+and outline colour here is well above that) inside the same border-flood
+fill, which keeps the connectivity property (isolated dark interior
+pixels — the pupil, eyebrow lines — can't be reached from the border) while
+removing the gradient-tunnelling failure mode.
+
+Scale was the second issue: this pose's raw silhouette (head drooped, wings
+folded low) is genuinely shorter than idle's, not just differently cropped,
+so matching idle's exact 104px height would have inflated the whole body —
+confirmed by overlaying idle's traced outline on candidates at a few
+heights, where 104px sat visibly outside the sad body's legs and 97px
+(76% canvas fill, still inside the 75–85% band) tracked them closely.
+Landed on the same bottom row (117) as idle and happy, so the ground line
+still holds. `reference/pegasus-reference-4x.png` now holds all three
+poses (idle/happy/sad, 4x) and is what gets attached when generating
+`sleep` next, the last pose in the required tier.
+
 The remaining placeholder stills (hippocampus, phoenix, griffin) still
 predate these rules — 471–640px, anti-aliased, gradient-shaded, and
 inconsistent in camera angle — and are out of scope here.
