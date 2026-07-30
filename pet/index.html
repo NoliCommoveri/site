@@ -657,6 +657,24 @@
   // shades of pink on this asset, not a separate protected accent hue like
   // T-Rex's belly. So the variant map below covers the *entire* palette,
   // hue-rotated as a block; there's nothing that needs to be left alone.
+  //
+  // Dragon and pegasus are unicorn's shape (one hue family, full-palette
+  // remap) but wider: dragon's 19 colors span H 210–280 (blue highlight
+  // through purple body, the "purple-on-blue" pair from SPEC.md), and
+  // pegasus's 20 span H 19–43 (near-black outline through golden-tan
+  // through flaxen-cream). Mapping every color to one fixed target hue
+  // (like unicorn's) would have flattened that spread — the blue highlight
+  // and purple body would end up the same hue, losing the two-tone read.
+  // So these two use a constant hue-rotation *delta* applied to every
+  // source color instead of a fixed target, which preserves the original
+  // spread (and hence the two-tone character) under the new hue.
+  //
+  // Hippocampus reverts to T-Rex's split shape: per SPEC.md it has two body
+  // hues, not one — an actual white (3 near-white highlight colors, all
+  // L≥0.95) plus a teal ramp (the other 7, L 0.13–0.85, S 0.44–0.72). Only
+  // the teal ramp is remapped (by delta, same reasoning as dragon/pegasus,
+  // since its 7 colors span H 171–199); the white passes through untouched,
+  // the same protected-accent pattern as T-Rex's belly.
   var COLOR_VARIANTS = {
     trex: {
       blue: {
@@ -733,6 +751,134 @@
           '#f7d4e3': '#d4f7f0',
           '#fde3ed': '#e3fdf8',
           '#fdeff5': '#effdfa'
+        }
+      }
+    },
+    dragon: {
+      emerald: {
+        swatch: '#2fbeaf',
+        map: {
+          '#91abea': '#95ea91',
+          '#6125a5': '#25a581',
+          '#4b218f': '#218f67',
+          '#b3d5f6': '#c4f6b3',
+          '#6a74d0': '#6ad07a',
+          '#8d2cbf': '#2cbfb2',
+          '#8c2dbf': '#2dbfb1',
+          '#401b71': '#1b7155',
+          '#8e2ec0': '#2ec0b2',
+          '#5d259e': '#259e7b',
+          '#8b2fbe': '#2fbeaf',
+          '#8e2dc0': '#2dc0b3',
+          '#7b29b4': '#29b49e',
+          '#874fc1': '#4fc1a3',
+          '#5f36aa': '#36aa7c',
+          '#39115b': '#115b4b',
+          '#9235c0': '#35c0b5',
+          '#592195': '#219576',
+          '#1a0827': '#082722'
+        }
+      },
+      ember: {
+        swatch: '#be972f',
+        map: {
+          '#91abea': '#ea91a4',
+          '#6125a5': '#a56c25',
+          '#4b218f': '#8f5421',
+          '#b3d5f6': '#f6b3cf',
+          '#6a74d0': '#d06a6b',
+          '#8d2cbf': '#bf992c',
+          '#8c2dbf': '#bf982d',
+          '#401b71': '#71471b',
+          '#8e2ec0': '#c09a2e',
+          '#5d259e': '#9e6725',
+          '#8b2fbe': '#be972f',
+          '#8e2dc0': '#c09a2d',
+          '#7b29b4': '#b48729',
+          '#874fc1': '#c1914f',
+          '#5f36aa': '#aa6936',
+          '#39115b': '#5b3f11',
+          '#9235c0': '#c09e35',
+          '#592195': '#956321',
+          '#1a0827': '#271d08'
+        }
+      }
+    },
+    pegasus: {
+      azure: {
+        swatch: '#4e46f4',
+        map: {
+          '#fdd87c': '#8d7cfd',
+          '#fbd375': '#8575fb',
+          '#fdeac2': '#c8c2fd',
+          '#fef0d1': '#d6d1fe',
+          '#fbdfa4': '#aca4fb',
+          '#a96731': '#3141a9',
+          '#f4b346': '#4e46f4',
+          '#cb9042': '#4244cb',
+          '#feecc6': '#cbc6fe',
+          '#fde6b4': '#bbb4fd',
+          '#e3a74a': '#4e4ae3',
+          '#e9bc71': '#7671e9',
+          '#f9d484': '#9084f9',
+          '#4e2e0e': '#0e134e',
+          '#f6bf59': '#6359f6',
+          '#fdd87b': '#8c7bfd',
+          '#feeecc': '#d1ccfe',
+          '#fef2d9': '#dcd9fe',
+          '#fcd984': '#9384fc',
+          '#23120a': '#0a1123'
+        }
+      },
+      rose: {
+        swatch: '#f44687',
+        map: {
+          '#fdd87c': '#fd7ca1',
+          '#fbd375': '#fb759d',
+          '#fdeac2': '#fdc2d5',
+          '#fef0d1': '#fed1df',
+          '#fbdfa4': '#fba4c0',
+          '#a96731': '#a93173',
+          '#f4b346': '#f44687',
+          '#cb9042': '#cb427d',
+          '#feecc6': '#fec6d8',
+          '#fde6b4': '#fdb4cb',
+          '#e3a74a': '#e34a86',
+          '#e9bc71': '#e9719e',
+          '#f9d484': '#f984a9',
+          '#4e2e0e': '#4e0e2e',
+          '#f6bf59': '#f65990',
+          '#fdd87b': '#fd7ba0',
+          '#feeecc': '#feccdc',
+          '#fef2d9': '#fed9e5',
+          '#fcd984': '#fc84a7',
+          '#23120a': '#230a1b'
+        }
+      }
+    },
+    hippocampus: {
+      coral: {
+        swatch: '#c66b57',
+        map: {
+          '#a4e4de': '#e4a8a4',
+          '#c6eee8': '#eec6c6',
+          '#57c3c6': '#c66b57',
+          '#3997a5': '#a55739',
+          '#8fd1d3': '#d39b8f',
+          '#0f445c': '#5c330f',
+          '#103133': '#331710'
+        }
+      },
+      violet: {
+        swatch: '#9b57c6',
+        map: {
+          '#a4e4de': '#c3a4e4',
+          '#c6eee8': '#d7c6ee',
+          '#57c3c6': '#9b57c6',
+          '#3997a5': '#8639a5',
+          '#8fd1d3': '#b98fd3',
+          '#0f445c': '#540f5c',
+          '#103133': '#261033'
         }
       }
     }
