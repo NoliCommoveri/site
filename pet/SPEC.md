@@ -122,11 +122,17 @@ not conforming assets, and need re-cutting.
 What a raw generated sheet needs before it is an asset, in order — each step
 exists because the first T-Rex sheet failed it:
 
-1. **Threshold alpha** to 0/255. Generated output is near-binary already
-   (that sheet: 68% at alpha 0, most of the rest ≥224) but carries a haze of
-   ~250k partial-alpha pixels that must not survive.
+1. **Threshold alpha** to 0/255, or **key the magenta** when the generation
+   used a flat `#FF00FF` background (background = red and blue both high,
+   green low). Magenta is much the easier case: `trex-sleep` came back with
+   1.13M clean background pixels and only ~3k contaminated fringe, against the
+   transparent-background sheet's haze of ~250k partial-alpha pixels. Step 5's
+   quantization de-fringes the leftovers for free — magenta has nowhere to
+   snap but a real palette colour.
 2. **Flood-fill from the border, treating the dark outline as a wall**, to
-   separate creature from background. **Dilate the outline by 1px first** —
+   separate creature from background — only needed for transparent-background
+   output; a magenta key already gives a clean silhouette. **Dilate the
+   outline by 1px first** —
    undilated, a hairline gap in one cell's outline let the fill into the body
    and ate 40k pixels of it.
 3. **Remove baked ground/shadow.** The generator draws a tan ground patch
@@ -137,9 +143,23 @@ exists because the first T-Rex sheet failed it:
    sprite's own bounding box. This is what actually enforces pose
    registration: identical scale, identical ground line, and the generator's
    own relative placement inside the cell preserved.
+
+   This only works for poses generated *together*. A pose generated on its
+   own has no shared window, so its scale has to be derived — and matching
+   the canvas height is wrong, because a curled sleeping creature is short
+   and wide where a standing one is tall and narrow. Silhouette area is also
+   a poor anchor: a curled pose is a denser blob (78% bbox fill vs 64%
+   standing), so area-matching oversizes it. What worked for `trex-sleep`:
+   scale so the sprite lands inside the 75–85% canvas-fill rule, then verify
+   by rendering it with the `idle` sprite ghosted behind at 28% opacity and
+   checking that the head reads the same size and the ground line holds.
+   Prefer generating poses in pairs so the shared window does this for you.
 5. **Downsample by box filter with ≥50% coverage** keeping a pixel, so edges
-   stay hard, then **median-cut to ~20 colours built from all poses at once**
-   so a species' poses cannot drift apart in palette.
+   stay hard, then quantize. For a species' *first* poses, median-cut to ~20
+   colours built from all of them at once. For every pose after that,
+   **quantize to the colours already committed for that species** rather than
+   deriving a new palette — that is what stops poses drifting apart, and it
+   doubles as the de-fringe step.
 6. **Recolour near-black palette entries** to the hue-shifted outline colour.
 
 Verify with `?pose=<name>` and check that the baseline row does not move
