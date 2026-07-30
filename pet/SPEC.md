@@ -10,8 +10,9 @@ A Tamagotchi-style virtual pet app for four siblings, built as a web app/PWA
   time (computed from a stored timestamp), so the pet keeps "aging" even
   while the tablet is closed.
 - Actions: Feed, Play, Clean, Sleep.
-- Species picker (currently placeholder blob art; real AI-generated pixel-art
-  stills for T-Rex/unicorn are in progress — see Art pipeline below).
+- Species picker: real AI-generated pixel-art stills for T-Rex, unicorn,
+  pegasus, and hippocampus (`pet/assets/`); slime/blob is still placeholder
+  SVG art — see Art pipeline below.
 - Mood-driven visual states (happy/neutral/sad/sleeping/dirty) via CSS, no
   hand animation required.
 - `localStorage` persistence.
@@ -58,12 +59,21 @@ doesn't need real-time locking.
 
 Because hand-coded SVG shapes don't read as "real" to young kids, the art
 comes from AI-generated pixel-art stills (ChatGPT image gen), one clean
-image per species with a transparent background — same approach that
-produced the working T-Rex reference image. A single "idle/happy" pose per
-species is enough; other moods (sad, sleepy, dirty) are faked with CSS
+image per species with a transparent background. A single "idle/happy" pose
+per species is enough; other moods (sad, sleepy, dirty) are faked with CSS
 filters and overlays (desaturate + droop, dim + "Zzz" + slow bob, semi-
 transparent dirt smudge) rather than needing a hand-drawn pose for every
 emotion.
+
+T-Rex, unicorn, pegasus, and hippocampus stills are in `pet/assets/`
+(`trex.png`, `unicorn.png`, `pegasus.png`, `hippocampus.png`) and wired up
+in `pet/index.html`: an `<img>` sprite swaps in per species alongside the
+original blob SVG, with the mood/dirt/sparkle overlays now implemented as
+plain HTML elements positioned over the stage so they work uniformly across
+both the SVG and raster-sprite species. Some source stills came back from
+the generator with an opaque or faux-checkerboard background instead of
+real alpha transparency; those were cleaned up with a flood-fill background
+removal pass before being cropped and added.
 
 Rendering is layered, back to front:
 1. Location/background image (behind everything)
