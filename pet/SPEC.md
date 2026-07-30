@@ -118,9 +118,17 @@ palette (`reference/dragon-palette.txt`/`.png`), same baseline row 117 and
 81% canvas fill as the T-Rex registration, hue-shifted outline. It was
 generated as a single pose (no sheet, no reference image to attach — nothing
 existed yet for this species), so the cleanup pipeline established the crop
-window and palette directly rather than inheriting one; `reference/
-dragon-idle-4x.png` now exists to attach when generating `dragon`'s next
-poses.
+window and palette directly rather than inheriting one.
+
+`dragon-happy.png` followed, generated on its own (not sheeted with idle)
+and attaching `dragon-reference-4x.png` for style/proportions only, so its
+scale had to be independently derived and verified per step 4 below rather
+than inherited from a shared crop window — it landed on the exact same
+top/bottom rows as idle (13–116, 104px tall) with no adjustment needed, and
+was quantized onto the *locked* `dragon-palette.txt` rather than a new ramp.
+`reference/dragon-reference-4x.png` (both poses, 4x) now exists to attach
+when generating `dragon`'s next poses, replacing the single-pose reference
+used to generate `happy`.
 
 The other five stills still predate these rules — they're 471–640px,
 anti-aliased, gradient-shaded, and inconsistent in camera angle (the griffin
