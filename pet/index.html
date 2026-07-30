@@ -1363,26 +1363,26 @@
       requestAnimationFrame(function () { hatchDark.classList.add('lit'); });
     });
 
-    hatchAfter(2200, function () {
+    hatchAfter(4400, function () {
       hatchCaption.textContent = 'Something is happening!';
       setHatchFrame(seq.frames.egg, 'shake-light');
     });
 
-    hatchAfter(4000, function () {
+    hatchAfter(8000, function () {
       playCrackSound();
       setHatchFrame(seq.frames.crack1, 'shake-light');
     });
 
-    hatchAfter(5600, function () {
+    hatchAfter(11200, function () {
       hatchCaption.textContent = 'Look, the baby ' + seq.label + ' is trying to get out!';
       setHatchFrame(seq.frames.crack2, 'shake-medium');
     });
 
-    hatchAfter(7600, function () {
+    hatchAfter(15200, function () {
       playCrackSound();
       setHatchFrame(seq.frames.hatch, 'shake-big');
       hatchCaption.textContent = 'Oh wow, it looks like you have a new best friend! What’s its name?';
-      hatchAfter(500, function () {
+      hatchAfter(1000, function () {
         setHatchFrame(seq.frames.hatch, '');
         hatchNameForm.style.display = 'flex';
         hatchNameInput.focus();
