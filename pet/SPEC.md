@@ -163,6 +163,19 @@ purple-on-blue dragon. `reference/pegasus-palette.txt`/`.png` hold the
 locked 20-colour ramp and `reference/pegasus-reference-4x.png` is what gets
 attached when generating `pegasus`'s `happy`/`sad`/`sleep` poses next.
 
+`pegasus-happy.png` followed: raised/spread wings, a lifted front hoof,
+and an open-mouth smile, generated on its own attaching the idle reference
+and independently scaled per step 4 (its raw silhouette ran wider than
+idle's, from the spread wings and raised leg, but the topmost point was
+still the same forelock cowlick as idle in both, confirming the height
+anchor held) — landed on the exact same top/bottom rows as idle (14–117,
+104px tall) with no adjustment needed. Ghost-overlay verified the head
+reads the same scale as idle before quantizing onto the *locked*
+`pegasus-palette.txt` rather than deriving a new one; every opaque pixel
+mapped onto an existing palette entry with no new colours and no stray
+near-black. `reference/pegasus-reference-4x.png` now holds both poses
+(idle/happy, 4x) and is what gets attached when generating `sad` next.
+
 The remaining placeholder stills (hippocampus, phoenix, griffin) still
 predate these rules — 471–640px, anti-aliased, gradient-shaded, and
 inconsistent in camera angle — and are out of scope here.
