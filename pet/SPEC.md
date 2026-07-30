@@ -115,14 +115,62 @@ actually has. Two tiers:
 | `happy` | mood avg ≥ 70 | Bright-eyed, open mouth, lifted posture | **required** |
 | `sad` | any stat < 20 | Head/ears down, drooped tail, downturned mouth | **required** |
 | `sleep` | sleep toggled on | **Lying down, eyes closed** — curled, head resting | **required** |
-| `eat` | Feed tapped | Head lowered to food, mouth open | action |
-| `play` | Play tapped | Mid-bounce, chasing a ball | action |
-| `bath` | Clean tapped | Sitting in suds, eyes squeezed shut | action |
+| `eat` | Feed tapped | Head toward food, mouth open, jaw down | action |
+| `eat-chew` | alternates with `eat` | Same pose, **mouth closed / jaw up** — the second chew frame | action |
+| `play` | Play tapped | Mid-bounce, weight forward toward the ball | action |
+| `bath` | Clean tapped | Sitting, eyes squeezed shut, head slightly turned | action |
 
 Required poses persist for as long as the mood holds. Action poses are
 transient — they hold `ACTION_POSE_MS` (1.8s) and then hand back to the mood
-pose. Seven poses × six species = 42 sprites; that is the real art budget
-for this feature, and it is the reason for the tiering.
+pose. Eight poses × six species = 48 creature sprites, plus 3 shared item
+sprites (below); that is the real art budget for this feature, and it is the
+reason for the tiering.
+
+### Action choreography
+
+An action is not a pose swap — it is a short sequence, modelled on how
+Pokémon plays item use: **the item travels to the pet, then the pet reacts.**
+Tapping Feed and having the pet silently switch to a chewing stance reads as
+a glitch; the arriving object is what makes the tap feel like it did
+something.
+
+Three phases inside the existing 1.8s window:
+
+| Phase | Duration | What happens |
+|---|---|---|
+| 1. Approach | ~400ms | Item sprite enters from the stage edge and arcs toward its anchor point on the pet — ease-out, slight overshoot on arrival. Pet still in its mood pose. |
+| 2. React | ~1000ms | Item lands and disappears (or stays put, for the bath suds). Pet switches to the action pose and plays its reaction loop. |
+| 3. Settle | ~400ms | Pet eases back to the mood pose, which has by then been recomputed from the improved stats. |
+
+Reaction loops, per action:
+
+- **Feed → chewing.** Alternate `eat` and `eat-chew` every ~180ms for the
+  duration. This is the one reaction that genuinely needs a second drawn
+  frame: chewing is a change of mouth and jaw shape, and no transform
+  produces it. Two frames is enough — pixel art reads chewing from a 2-frame
+  loop, and a third adds cost without adding legibility.
+- **Clean → shaking.** A rapid low-amplitude horizontal wobble on the `bath`
+  sprite (±3–4px, ~90ms period, decaying). Deliberately **CSS-only, no
+  second frame**: a whole-body shake *is* a rigid-body transform, so a
+  transform is the honest implementation rather than a fake. Contrast with
+  chewing above — the test is whether the shape changes or merely moves.
+- **Play → bounce.** Same reasoning as the shake: an existing vertical
+  transform on the `play` sprite, no second frame.
+
+Item sprites are **32×32, on the shared palette, and species-independent** —
+one apple/food item, one soap-and-bubbles, one ball, reused across all six
+species. Three sprites total, no per-species multiplication.
+
+Where an item lands is per-species, since a hippocampus's mouth is nowhere
+near a T-Rex's: extend the accessory anchor config with an `item` slot, so
+the food arrives at the mouth and the suds land over the body. Suds may also
+sit as a persistent overlay for the reaction phase rather than vanishing on
+contact.
+
+Deliberately out of scope for now: Sleep gets no travelling item (nothing is
+being applied to the pet — the pet changes state), and no action gets a
+screen-shake, flash, or particle burst. The tone in §1 is calm and cozy;
+these should read as gentle, not as combat feedback.
 
 ### Fallback chain
 
@@ -131,12 +179,19 @@ missing walks `POSE_FALLBACK` until it reaches `idle`, which is the one pose
 a species may not ship without:
 
 ```
-eat  → happy → idle
-play → happy → idle
-bath → idle
-sad  → idle
-sleep → idle
+eat-chew → eat → happy → idle
+eat      → happy → idle
+play     → happy → idle
+bath     → idle
+sad      → idle
+sleep    → idle
 ```
+
+`eat-chew` falling back to `eat` degrades gracefully on its own terms: both
+frames of the chew loop resolve to the same sprite, so the mouth simply
+doesn't move and nothing flickers. The travelling item and the other two
+reaction loops are CSS, so they work regardless of which poses exist — the
+approach phase is worth building before any pose art lands.
 
 When a pose resolves exactly, the stage gets `pose-<name>`. When it falls
 back, it also gets `pose-fallback`, and **only then** do the old CSS fakes
@@ -269,11 +324,13 @@ Fire OS kid profile). Family-level passcode gates the Worker API.
 1. **MVP (in progress)**: single pet, stats/mood engine, species picker,
    local persistence — this is `pet/index.html` today.
 2. **Real art (in progress)**: pose-swapping renderer and fallback chain are
-   built; the remaining work is art, not code. In order: commit the shared
-   palette, then draw the four required poses per species (`sleep` first —
-   it's the one whose absence is currently most obvious), then the three
-   action poses, then re-cut the six placeholder stills to 64×64 so the whole
-   set conforms to §4.
+   built. Remaining, in order: commit the shared palette; draw the four
+   required poses per species (`sleep` first — it's the one whose absence is
+   currently most obvious); build the travelling-item choreography and the
+   shake/bounce loops (CSS, no art dependency); draw the four action poses
+   including the `eat-chew` second frame and the three shared item sprites;
+   then re-cut the six placeholder stills to 64×64 so the whole set conforms
+   to §4.
 3. **Cloudflare backend**: Workers + D1 + Durable Objects, family/kid
    profiles, passcode auth, cross-device sync.
 4. **Social v1**: read-only visiting, once-daily helper actions, gifting,
