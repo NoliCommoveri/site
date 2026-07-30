@@ -644,12 +644,19 @@
   // offscreen canvas and cached — the tan/cream belly and every other
   // palette entry pass through untouched.
   //
-  // T-Rex only, as a trial before rolling this out to the rest of the
-  // roster. Its 20-color palette (reference/trex-palette.txt) splits cleanly
-  // into a 7-color green body/outline ramp and a 13-color tan/cream belly
-  // ramp; each variant below remaps just the green ramp, hue-rotated to a
-  // new hue at matching lightness/saturation so the value steps (shadow →
-  // highlight) stay intact.
+  // T-Rex was the trial species. Its 20-color palette
+  // (reference/trex-palette.txt) splits cleanly into a 7-color green
+  // body/outline ramp and a 13-color tan/cream belly ramp; each variant
+  // below remaps just the green ramp, hue-rotated to a new hue at matching
+  // lightness/saturation so the value steps (shadow → highlight) stay
+  // intact and the belly/teeth/mouth interior pass through untouched.
+  //
+  // Unicorn is a different shape of the same problem: its whole 20-color
+  // palette (reference/unicorn-palette.txt) is one hue family (H 323–342,
+  // pink) at varying lightness/saturation — mane, body, and hooves are all
+  // shades of pink on this asset, not a separate protected accent hue like
+  // T-Rex's belly. So the variant map below covers the *entire* palette,
+  // hue-rotated as a block; there's nothing that needs to be left alone.
   var COLOR_VARIANTS = {
     trex: {
       blue: {
@@ -674,6 +681,58 @@
           '#708b26': '#8b2633',
           '#acc03e': '#c03e4f',
           '#6f9725': '#972534'
+        }
+      }
+    },
+    unicorn: {
+      violet: {
+        swatch: '#9773c9',
+        map: {
+          '#6f1d50': '#3f1d6f',
+          '#972e64': '#5a2e97',
+          '#a13869': '#6438a1',
+          '#bb4778': '#7747bb',
+          '#cf4f84': '#844fcf',
+          '#c15c89': '#865cc1',
+          '#dc5b8f': '#915bdc',
+          '#c97398': '#9773c9',
+          '#ea699c': '#9f69ea',
+          '#dd79a0': '#a379dd',
+          '#ee79a4': '#aa79ee',
+          '#d48cac': '#aa8cd4',
+          '#e392b2': '#b492e3',
+          '#f493b3': '#bb93f4',
+          '#f6a4bc': '#c6a4f6',
+          '#f0b3cb': '#ccb3f0',
+          '#f4c4d9': '#d8c4f4',
+          '#f7d4e3': '#e3d4f7',
+          '#fde3ed': '#eee3fd',
+          '#fdeff5': '#f5effd'
+        }
+      },
+      mint: {
+        swatch: '#73c9b8',
+        map: {
+          '#6f1d50': '#1d6f5f',
+          '#972e64': '#2e9782',
+          '#a13869': '#38a18c',
+          '#bb4778': '#47bba4',
+          '#cf4f84': '#4fcfb5',
+          '#c15c89': '#5cc1ad',
+          '#dc5b8f': '#5bdcc2',
+          '#c97398': '#73c9b8',
+          '#ea699c': '#69ead0',
+          '#dd79a0': '#79ddc9',
+          '#ee79a4': '#79eed7',
+          '#d48cac': '#8cd4c6',
+          '#e392b2': '#92e3d3',
+          '#f493b3': '#93f4e1',
+          '#f6a4bc': '#a4f6e6',
+          '#f0b3cb': '#b3f0e4',
+          '#f4c4d9': '#c4f4ea',
+          '#f7d4e3': '#d4f7f0',
+          '#fde3ed': '#e3fdf8',
+          '#fdeff5': '#effdfa'
         }
       }
     }
