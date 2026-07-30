@@ -14,12 +14,15 @@ A Tamagotchi-style virtual pet app for four siblings, built as a web app/PWA
   pegasus, hippocampus, phoenix, griffin, and dragon (`pet/assets/`); slime/blob is
   still placeholder SVG art — see Art pipeline below. Species is chosen
   once at first launch and then locked for that pet — see Species selection
-  below.
+  below. T-Rex, unicorn, dragon, hippocampus, and pegasus are the kept
+  roster (all five conform to the Art pipeline rules below); phoenix and
+  griffin are legacy placeholders slated for removal, not yet acted on.
 - Mood- and action-driven **pose swapping**: the renderer picks a distinct
   drawn sprite per state (idle/happy/sad/sleep + eat/play/bath) from the
   `SPECIES_POSES` manifest, falling back to `idle` for any pose not yet
-  drawn — see Art pipeline below. Only `idle` exists today for the six
-  raster species, so the fallback is currently doing all the work.
+  drawn — see Art pipeline below. The five kept species each have all four
+  required poses (idle/happy/sad/sleep); action poses (eat/play/bath) are
+  still unbuilt for all of them, so the fallback chain does that work.
 - `localStorage` persistence.
 
 Everything below is the target end-state, to be built in phases on top of
@@ -144,6 +147,66 @@ reads the same scale as idle before quantizing onto the locked palette.
 holds all four (idle/happy/sad/sleep, 4x) and is what gets attached when
 generating `dragon`'s action poses next.
 
+`unicorn` has also been completed to these rules (idle/happy/sad/sleep, same
+128×128/81%-fill registration), it just predates this paragraph being
+written up.
+
+`hippocampus.png` (idle) is a conforming asset built the same way as dragon's
+first pose: generated as a single pose (no sheet, no conforming reference to
+attach yet), so crop window and palette were derived fresh — rows 13–116
+(104px tall, 81% canvas fill), matching the T-Rex/dragon baseline
+registration. Small fins were added on the back of each front leg, above the
+hoof, to read as seahorse anatomy consistent with the tail and mane fins.
+The raw generation came back noticeably softer/gradient-shaded than T-Rex
+and dragon's source art — two rounds of prompting to push flatter
+cel-shading closed most of that gap, and the remainder was closed in
+cleanup: quantized to a 10-colour teal/aqua ramp
+(`reference/hippocampus-palette.txt`/`.png`), with the near-black
+quantization cluster collapsed to one hue-shifted dark-teal outline rather
+than left as several near-duplicate near-blacks. Fewer colours than T-Rex/
+dragon's ~19–20 because the creature only has two body hues (white, teal)
+against their three-plus; the flat-banding rule, not a specific count, is
+what's normative.
+
+`hippocampus-happy.png` followed, generated on its own attaching the idle
+reference and asking for the pose only (bright eyes, open mouth, lifted
+posture) with everything else — scale, ground line, palette, flat-shading
+technique — held fixed. It needed its own crop window rather than reusing
+idle's verbatim, since the lifted front leg extends beyond idle's silhouette
+on the left and top, but landed within a couple of pixels of idle's window
+anyway (same target row 13–116) — confirmed by bounding-box comparison and
+a ghost-overlay check before cleanup, not just assumed. Quantized onto the
+locked `hippocampus-palette.txt` rather than a new ramp; all 10 colours got
+used, nothing fell off-palette.
+
+`hippocampus-sad.png` followed the same process: generated on its own
+attaching the two-pose reference, asked to name the stance explicitly
+(standing, weight back, head/ears lowered, tail coiled low, eyes
+half-closed) rather than left to default to lying down. Registration held —
+landed one pixel off idle/happy's horizontal placement (x=30 vs 31, both
+top row 13) — but cleanup hit a real bug the first pass: the crop was taken
+from the pre-key RGB image instead of the post-key RGBA one, so the magenta
+margin inside the crop box came through fully opaque and quantized into a
+visible teal rectangle behind the creature. Re-run correctly (key to alpha
+*before* cropping, exactly as idle/happy did), it quantized cleanly onto
+all 10 locked palette colours with no rectangle. Worth watching for on
+future poses since it's an easy step to skip by accident.
+
+`hippocampus-sleep.png` completed the required tier. Curled poses need the
+different scaling approach flagged above: scaled by *width* rather than
+height, landing at 80.5% width fill (bbox 103px wide within the 128
+canvas) — matching what `trex-sleep.png` and `dragon-sleep.png` both
+independently landed on (80.5% width fill exactly) — with the same bottom
+row (116) as the other three hippocampus poses, ground line held.
+Ghost-overlay verified the head reads the same scale as idle before
+quantizing onto the locked palette; all 10 colours got used again, no
+repeat of the sad-pose cropping bug.
+
+`hippocampus` now has all four required poses.
+`reference/hippocampus-reference-4x.png` holds all four (idle/happy/sad/
+sleep, 4x, 2048×512) and is what gets attached when generating
+`hippocampus`'s action poses (`eat`/`eat-chew`/`play`/`bath`) next.
+
 `pegasus.png` (idle) replaces the old placeholder outright rather than being
 re-cut from it — the legacy still was a ~600px anti-aliased white-and-gold
 side-ish illustration with a plain dark outline, none of which conforms.
@@ -213,9 +276,14 @@ now has all four required poses. `reference/pegasus-reference-4x.png`
 holds all four (idle/happy/sad/sleep, 4x) and is what gets attached when
 generating `pegasus`'s action poses next.
 
-The remaining placeholder stills (hippocampus, phoenix, griffin) still
-predate these rules — 471–640px, anti-aliased, gradient-shaded, and
-inconsistent in camera angle — and are out of scope here.
+`hippocampus` and `pegasus` were built out to these rules independently, in
+parallel. Both are keepers — the roster is **T-Rex, unicorn, dragon,
+hippocampus, and pegasus**, all five now at the required four-pose tier.
+`griffin` and `phoenix` are the ones being dropped: their stills predate
+these rules — 471–640px, anti-aliased, gradient-shaded, and inconsistent in
+camera angle (the griffin painterly ¾, formerly the unicorn full side) —
+and won't be re-cut. That removal (species picker, `SPECIES_POSES`, and the
+asset files themselves) hasn't been done yet.
 
 ### Cleanup pass for generated art
 
