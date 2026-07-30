@@ -506,6 +506,42 @@ require a minimum average care score to advance, so pure neglect doesn't
 still age the pet up — deliberately deferred since it adds complexity kids
 may find punishing/confusing at first.
 
+### Hatching / birth sequence
+Separate from the deferred lifecycle-aging feature above: right after
+species selection, `pet/index.html` plays a one-time animated beat
+sequence (`startHatchSequence`) in place of immediate pet creation — a
+darkened screen lightens onto the intact egg, the egg shakes and cracks
+through two escalating stages (with a synthesized crack sound, since
+there's no audio asset yet), the newborn pose appears, and the kid names
+their pet before `finalizeNewPet` hands off into the normal pet screen.
+This only plays for species present in the `HATCH_SEQUENCES` map; anything
+missing from it falls straight through to the old immediate-creation flow
+— same "degrades cleanly during art work" pattern as `POSE_FALLBACK`
+above, gated by map membership rather than a fallback chain.
+
+**Build plan per species:** four new frames beyond the standard four
+lifecycle poses — `assets/<species>-egg.png`, `-egg-crack1.png`,
+`-egg-crack2.png`, and `-hatch.png` — drawn to the same crop/palette/canvas
+rules as the Art pipeline (§4). Once a species' four frames exist, wiring
+it in is a one-line `HATCH_SEQUENCES` entry (label + the four frame paths),
+the same shape as a `SPECIES_POSES` registration.
+
+**Progress** (every kept species is meant to get one eventually; phoenix
+and griffin are the legacy placeholders slated for removal elsewhere in
+this doc, so they're excluded from that plan):
+- ✅ T-Rex — full 4-frame set drawn and wired. Sequence timing was doubled
+  2026-07-30 so kids have time to read each caption and watch the shake
+  before it advances: egg hold 4.4s → "something is happening" shake-light
+  3.6s → crack1 shake-light 3.2s → crack2 shake-medium 4s → hatch
+  shake-big + 1s still hold before the name form appears. The shake
+  keyframes themselves (`shake-light`/`-medium`/`-big`) are `infinite`
+  loops, so they keep shaking for the full length of whichever stage
+  applies them.
+- ⬜ Unicorn, pegasus, hippocampus, dragon — no hatch art yet; picking
+  these species still skips straight to instant pet creation. Remaining
+  work is art-only (four frames each), no further code changes needed
+  beyond their `HATCH_SEQUENCES` entry.
+
 ### Species selection
 Species is picked once, at first launch, and then locked for the life of
 that pet — `pet/index.html` shows a dedicated "Choose your pet!" screen
