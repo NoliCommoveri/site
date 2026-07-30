@@ -165,9 +165,22 @@ quantization cluster collapsed to one hue-shifted dark-teal outline rather
 than left as several near-duplicate near-blacks. Fewer colours than T-Rex/
 dragon's ~19–20 because the creature only has two body hues (white, teal)
 against their three-plus; the flat-banding rule, not a specific count, is
-what's normative. `reference/hippocampus-reference-4x.png` holds the idle
-pose at 4x and is what gets attached when generating the remaining three
-required poses.
+what's normative.
+
+`hippocampus-happy.png` followed, generated on its own attaching the idle
+reference and asking for the pose only (bright eyes, open mouth, lifted
+posture) with everything else — scale, ground line, palette, flat-shading
+technique — held fixed. It needed its own crop window rather than reusing
+idle's verbatim, since the lifted front leg extends beyond idle's silhouette
+on the left and top, but landed within a couple of pixels of idle's window
+anyway (same target row 13–116) — confirmed by bounding-box comparison and
+a ghost-overlay check before cleanup, not just assumed. Quantized onto the
+locked `hippocampus-palette.txt` rather than a new ramp; all 10 colours got
+used, nothing fell off-palette.
+
+`reference/hippocampus-reference-4x.png` is a growing sheet (currently
+1024×512, idle then happy at 4x each) and is what gets attached when
+generating the remaining two required poses.
 
 The griffin, pegasus, and phoenix stills predate these rules — they're
 471–640px, anti-aliased, gradient-shaded, and inconsistent in camera angle
