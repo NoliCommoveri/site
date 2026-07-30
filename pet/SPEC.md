@@ -130,10 +130,19 @@ was quantized onto the *locked* `dragon-palette.txt` rather than a new ramp.
 `dragon-sad.png` followed the same process — generated on its own attaching
 the (by then two-pose) reference, independently scaled and ghost-overlay
 verified against idle (again landed on rows 13–116 with no adjustment),
-quantized onto the locked palette. `reference/dragon-reference-4x.png` now
-holds all three poses (idle/happy/sad, 4x), mirroring
-`trex-reference-4x.png`'s three-cell layout, and is what gets attached when
-generating `dragon`'s next pose.
+quantized onto the locked palette.
+
+`dragon-sleep.png` completed the required tier. Curled poses need the
+different scaling approach flagged above: matching canvas *height* would
+undersize it (a curled sleeper is short and wide), so it was scaled by
+*width* instead, landing at 81% width fill — matching what `trex-sleep.png`
+independently landed on (81.2%) — with the same bottom row (116) as the
+other three dragon poses, ground line held. Ghost-overlay verified the head
+reads the same scale as idle before quantizing onto the locked palette.
+
+`dragon` now has all four required poses. `reference/dragon-reference-4x.png`
+holds all four (idle/happy/sad/sleep, 4x) and is what gets attached when
+generating `dragon`'s action poses next.
 
 The other five stills still predate these rules — they're 471–640px,
 anti-aliased, gradient-shaded, and inconsistent in camera angle (the griffin
