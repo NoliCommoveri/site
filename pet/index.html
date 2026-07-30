@@ -139,6 +139,9 @@
     animation: bob 2.6s ease-in-out infinite;
   }
   #pet-sprite { object-fit: contain; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.12)); }
+  /* Added by JS once a sprite loads at <=128px wide, i.e. it's true 64x64
+     pixel art being upscaled. Legacy 640px stills keep smooth downscaling. */
+  #pet-sprite.pixel-art { image-rendering: pixelated; }
   .species-blob #pet-svg { display: block; }
   .species-trex #pet-sprite,
   .species-unicorn #pet-sprite,
@@ -146,9 +149,14 @@
   .species-pegasus #pet-sprite,
   .species-phoenix #pet-sprite,
   .species-griffin #pet-sprite { display: block; }
+  /* Idle-bob rate reads as breathing, so it applies to real pose art too. */
   .mood-happy .pet-visual { animation-duration: 1.3s; }
-  .mood-sad .pet-visual { animation: droop-bob 3.4s ease-in-out infinite; }
-  .mood-sleeping .pet-visual { animation: bob 4.5s ease-in-out infinite; opacity: 0.92; }
+  .mood-sleeping .pet-visual { animation: bob 4.5s ease-in-out infinite; }
+  /* Everything below only runs when we had to fall back to the idle sprite
+     for this mood — a real sad/sleep pose must not also get droop-rotated
+     and desaturated on top of what the artist already drew. */
+  .pose-fallback.mood-sad .pet-visual { animation: droop-bob 3.4s ease-in-out infinite; }
+  .pose-fallback.mood-sleeping .pet-visual { opacity: 0.92; }
 
   @keyframes bob {
     0%, 100% { transform: translateY(0); }
@@ -177,7 +185,13 @@
   .mood-sleeping .mouth-sleeping { display: block; }
 
   .body-shape { fill: url(#bodyGradient); transition: filter 0.4s ease; }
-  .mood-sad .pet-visual { filter: grayscale(35%) brightness(0.95); }
+  /* #pet-sprite in the selector because the ID rule above sets `filter` for
+     the drop shadow, and a bare .mood-sad .pet-visual loses to it — which is
+     why raster species never actually desaturated when sad. */
+  .pose-fallback.mood-sad #pet-svg.pet-visual,
+  .pose-fallback.mood-sad #pet-sprite.pet-visual {
+    filter: grayscale(35%) brightness(0.95) drop-shadow(0 6px 6px rgba(0,0,0,0.12));
+  }
 
   .accessory { display: none; }
   .species-blob .accessory-blob { display: block; }
@@ -491,14 +505,72 @@
     neutral: 'Doing okay.'
   };
 
-  var SPECIES_SPRITES = {
-    trex: 'assets/trex.png',
-    unicorn: 'assets/unicorn.png',
-    pegasus: 'assets/pegasus.png',
-    hippocampus: 'assets/hippocampus.png',
-    phoenix: 'assets/phoenix.png',
-    griffin: 'assets/griffin.png'
+  // --- Pose art -----------------------------------------------------------
+  //
+  // Each mood/action maps to its own drawn sprite rather than a CSS filter
+  // over one still. See SPEC.md "Pose set" for what each pose depicts and the
+  // file-naming rule (`assets/<species>-<pose>.png`; idle keeps the bare
+  // `assets/<species>.png` name it shipped with).
+  //
+  // Only list files that actually exist — a missing entry degrades down
+  // POSE_FALLBACK instead of 404ing into a broken image icon.
+  var SPECIES_POSES = {
+    trex: { idle: 'assets/trex.png' },
+    unicorn: { idle: 'assets/unicorn.png' },
+    pegasus: { idle: 'assets/pegasus.png' },
+    hippocampus: { idle: 'assets/hippocampus.png' },
+    phoenix: { idle: 'assets/phoenix.png' },
+    griffin: { idle: 'assets/griffin.png' }
   };
+
+  // Where each pose degrades to when its art hasn't been drawn yet. Every
+  // chain has to terminate at idle, which is the one pose a species may not
+  // ship without.
+  var POSE_FALLBACK = {
+    idle: null,
+    happy: 'idle',
+    sad: 'idle',
+    sleep: 'idle',
+    eat: 'happy',
+    play: 'happy',
+    bath: 'idle'
+  };
+
+  var MOOD_POSES = {
+    happy: 'happy',
+    neutral: 'idle',
+    sad: 'sad',
+    sleeping: 'sleep'
+  };
+
+  var POSE_MOODS = { happy: 'happy', idle: 'neutral', sad: 'sad', sleep: 'sleeping' };
+
+  var POSE_ALT = {
+    idle: '',
+    happy: ', looking delighted',
+    sad: ', looking sad',
+    sleep: ', asleep',
+    eat: ', eating',
+    play: ', playing',
+    bath: ', having a bath'
+  };
+
+  // How long an action pose holds before falling back to the mood pose.
+  var ACTION_POSE_MS = 1800;
+  var ACTION_POSES = { feed: 'eat', play: 'play', clean: 'bath' };
+
+  // Walks the fallback chain and reports whether it landed on the pose we
+  // actually wanted, so the CSS can tell "real art" from "faked with filters".
+  function resolvePose(species, wanted) {
+    var set = SPECIES_POSES[species];
+    // Species with no raster art at all (blob) is drawn by the inline SVG,
+    // which does swap real eye/mouth shapes per mood — so it counts as exact.
+    if (!set) return { pose: wanted, src: null, exact: true };
+    var name = wanted;
+    while (name && !set[name]) name = POSE_FALLBACK[name];
+    if (!name) return { pose: 'idle', src: set.idle || null, exact: false };
+    return { pose: name, src: set[name], exact: name === wanted };
+  }
 
   var speciesPicker = document.getElementById('species-picker');
   var appBody = document.getElementById('app-body');
@@ -518,6 +590,33 @@
 
   var state = loadState();
 
+  // Transient, so deliberately not part of the persisted state — reopening
+  // the app shouldn't resume a half-finished bath.
+  var actionPose = null;
+  var actionPoseTimer = null;
+
+  // `?pose=sleep` pins a pose so new art can be checked without having to
+  // starve the pet into the matching mood first.
+  var posePreview = (function () {
+    var match = /[?&]pose=([a-z]+)/.exec(window.location.search);
+    return match && POSE_FALLBACK.hasOwnProperty(match[1]) ? match[1] : null;
+  })();
+
+  function showActionPose(pose) {
+    actionPose = pose;
+    clearTimeout(actionPoseTimer);
+    actionPoseTimer = setTimeout(function () {
+      actionPose = null;
+      render();
+    }, ACTION_POSE_MS);
+  }
+
+  // True 64x64 art needs nearest-neighbour upscaling or it turns to mush;
+  // the legacy 640px stills need the opposite. Decide per file on load.
+  petSprite.addEventListener('load', function () {
+    petSprite.classList.toggle('pixel-art', petSprite.naturalWidth > 0 && petSprite.naturalWidth <= 128);
+  });
+
   function render() {
     if (!state.species) {
       speciesPicker.style.display = 'block';
@@ -528,11 +627,23 @@
     appBody.style.display = 'block';
 
     var mood = getMood(state);
-    stage.className = 'stage mood-' + mood + ' species-' + state.species + (state.cleanliness < 35 ? ' dirty' : '');
+    // An action pose (eating, bathing) outranks the mood pose while it holds.
+    var wanted = posePreview || actionPose || MOOD_POSES[mood] || 'idle';
+    // Pin the matching mood too when previewing, otherwise the mood-keyed
+    // fallback styling won't match the pose being previewed.
+    if (posePreview && POSE_MOODS[posePreview]) mood = POSE_MOODS[posePreview];
+    var art = resolvePose(state.species, wanted);
 
-    if (SPECIES_SPRITES[state.species]) {
-      petSprite.src = SPECIES_SPRITES[state.species];
-      petSprite.alt = (state.name || 'Your pet') + ' the ' + state.species;
+    stage.className = 'stage mood-' + mood + ' species-' + state.species +
+      ' pose-' + art.pose + (art.exact ? '' : ' pose-fallback') +
+      (state.cleanliness < 35 ? ' dirty' : '');
+
+    if (art.src && petSprite.getAttribute('src') !== art.src) {
+      petSprite.src = art.src;
+    }
+    if (art.src) {
+      petSprite.alt = (state.name || 'Your pet') + ' the ' + state.species +
+        POSE_ALT[art.pose];
     }
 
     speciesButtons.forEach(function (btn) {
@@ -572,32 +683,37 @@
     visual.classList.add('action-flash');
   }
 
-  function doAction(fn) {
+  function doAction(action, fn) {
     return function () {
       applyDecay(state);
       fn();
+      if (ACTION_POSES[action]) showActionPose(ACTION_POSES[action]);
       saveState();
       render();
       flash();
     };
   }
 
-  btnFeed.addEventListener('click', doAction(function () {
+  btnFeed.addEventListener('click', doAction('feed', function () {
     state.hunger = clamp(state.hunger + 25);
   }));
 
-  btnPlay.addEventListener('click', doAction(function () {
+  btnPlay.addEventListener('click', doAction('play', function () {
     state.happiness = clamp(state.happiness + 20);
     state.energy = clamp(state.energy - 10);
     state.hunger = clamp(state.hunger - 5);
   }));
 
-  btnClean.addEventListener('click', doAction(function () {
+  btnClean.addEventListener('click', doAction('clean', function () {
     state.cleanliness = 100;
   }));
 
-  btnSleep.addEventListener('click', doAction(function () {
+  // Sleep has no action pose of its own — toggling it changes the mood, and
+  // the sleep pose comes from there and holds until the pet wakes.
+  btnSleep.addEventListener('click', doAction('sleep', function () {
     state.sleeping = !state.sleeping;
+    actionPose = null;
+    clearTimeout(actionPoseTimer);
   }));
 
   renameToggle.addEventListener('click', function () {

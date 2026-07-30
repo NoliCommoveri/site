@@ -15,8 +15,11 @@ A Tamagotchi-style virtual pet app for four siblings, built as a web app/PWA
   still placeholder SVG art — see Art pipeline below. Species is chosen
   once at first launch and then locked for that pet — see Species selection
   below.
-- Mood-driven visual states (happy/neutral/sad/sleeping/dirty) via CSS, no
-  hand animation required.
+- Mood- and action-driven **pose swapping**: the renderer picks a distinct
+  drawn sprite per state (idle/happy/sad/sleep + eat/play/bath) from the
+  `SPECIES_POSES` manifest, falling back to `idle` for any pose not yet
+  drawn — see Art pipeline below. Only `idle` exists today for the six
+  raster species, so the fallback is currently doing all the work.
 - `localStorage` persistence.
 
 Everything below is the target end-state, to be built in phases on top of
@@ -57,38 +60,176 @@ doesn't need real-time locking.
   log; doubles as audit trail and visit history)
 - `visits` — id, visitor_kid_id, host_pet_id, started_at, ended_at
 
-## 4. Art pipeline (no art skills required)
+## 4. Art pipeline
 
-Because hand-coded SVG shapes don't read as "real" to young kids, the art
-comes from AI-generated pixel-art stills (ChatGPT image gen), one clean
-image per species with a transparent background. A single "idle/happy" pose
-per species is enough; other moods (sad, sleepy, dirty) are faked with CSS
-filters and overlays (desaturate + droop, dim + "Zzz" + slow bob, semi-
-transparent dirt smudge) rather than needing a hand-drawn pose for every
-emotion.
+Because hand-coded SVG shapes don't read as "real" to young kids, the art is
+pixel-art stills with transparent backgrounds, generated (ChatGPT image gen)
+and then cleaned up to the constraints below.
 
-T-Rex, unicorn, pegasus, and hippocampus stills are in `pet/assets/`
-(`trex.png`, `unicorn.png`, `pegasus.png`, `hippocampus.png`) and wired up
-in `pet/index.html`: an `<img>` sprite swaps in per species alongside the
-original blob SVG, with the mood/dirt/sparkle overlays now implemented as
-plain HTML elements positioned over the stage so they work uniformly across
-both the SVG and raster-sprite species. Some source stills came back from
-the generator with an opaque or faux-checkerboard background instead of
-real alpha transparency; those were cleaned up with a flood-fill background
+**Mood is conveyed by a different drawn pose, not by filtering one image.**
+An earlier version of this spec said "a single idle/happy pose per species is
+enough" with other moods faked via CSS. That was wrong in a way kids notice
+immediately: a desaturated, slightly rotated idle sprite with a floating "Z"
+next to it is still a pet standing up with its eyes wide open. CSS can change
+color, timing, and position — it cannot close an eyelid, droop an ear, or lie
+a creature down. Distinct pose art is the deliverable.
+
+### Style constraints (normative)
+
+Every sprite, for every species and pose, must satisfy:
+
+- **64×64 canvas**, creature filling roughly 75–85% of it, leaving room for
+  tails/wings/ears/effects. Never crop body parts.
+- **One shared palette** across all sprites, environments, UI, and effects.
+  Committed as a file, not held in someone's head.
+- **Three-quarter view, ~20–30° rotation**, facing slightly toward the
+  viewer. Never full profile, never top-down.
+- **Light source upper-left**, consistently. 2–3 shadow values plus 1
+  highlight value. No gradients.
+- **Dark outline, never pure black**, hue-shifted toward the creature's own
+  palette.
+- **No anti-aliasing, no blurry shading, no AI-painted texture.** Generated
+  output gets downsampled, quantized to the palette, and hand-cleaned; it is
+  a starting point, not the asset.
+- **Pose registration:** all poses of one species share canvas size, ground
+  line, and body scale, so swapping poses doesn't make the pet visibly jump
+  or resize. This is the constraint most likely to be violated by generating
+  each pose as an independent image, and the most jarring when it is.
+
+The six stills currently in `pet/assets/` predate these rules — they're
+471–640px, anti-aliased, gradient-shaded, and inconsistent in camera angle
+(the T-Rex is near-profile, the griffin painterly ¾, the unicorn full side).
+They are proof-of-concept placeholders, not conforming assets. Some also came
+back from the generator with an opaque or faux-checkerboard background
+instead of real alpha, and were cleaned up with a flood-fill background
 removal pass before being cropped and added.
+
+### Pose set
+
+Trimmed from a full 12-mood expression grid down to the states the app
+actually has. Two tiers:
+
+| Pose | Trigger | Depicts | Tier |
+|---|---|---|---|
+| `idle` | neutral mood | Standing, calm, eyes open, ¾ view | **required** |
+| `happy` | mood avg ≥ 70 | Bright-eyed, open mouth, lifted posture | **required** |
+| `sad` | any stat < 20 | Head/ears down, drooped tail, downturned mouth | **required** |
+| `sleep` | sleep toggled on | **Lying down, eyes closed** — curled, head resting | **required** |
+| `eat` | Feed tapped | Head toward food, mouth open, jaw down | action |
+| `eat-chew` | alternates with `eat` | Same pose, **mouth closed / jaw up** — the second chew frame | action |
+| `play` | Play tapped | Mid-bounce, weight forward toward the ball | action |
+| `bath` | Clean tapped | Sitting, eyes squeezed shut, head slightly turned | action |
+
+Required poses persist for as long as the mood holds. Action poses are
+transient — they hold `ACTION_POSE_MS` (1.8s) and then hand back to the mood
+pose. Eight poses × six species = 48 creature sprites, plus 3 shared item
+sprites (below); that is the real art budget for this feature, and it is the
+reason for the tiering.
+
+### Action choreography
+
+An action is not a pose swap — it is a short sequence, modelled on how
+Pokémon plays item use: **the item travels to the pet, then the pet reacts.**
+Tapping Feed and having the pet silently switch to a chewing stance reads as
+a glitch; the arriving object is what makes the tap feel like it did
+something.
+
+Three phases inside the existing 1.8s window:
+
+| Phase | Duration | What happens |
+|---|---|---|
+| 1. Approach | ~400ms | Item sprite enters from the stage edge and arcs toward its anchor point on the pet — ease-out, slight overshoot on arrival. Pet still in its mood pose. |
+| 2. React | ~1000ms | Item lands and disappears (or stays put, for the bath suds). Pet switches to the action pose and plays its reaction loop. |
+| 3. Settle | ~400ms | Pet eases back to the mood pose, which has by then been recomputed from the improved stats. |
+
+Reaction loops, per action:
+
+- **Feed → chewing.** Alternate `eat` and `eat-chew` every ~180ms for the
+  duration. This is the one reaction that genuinely needs a second drawn
+  frame: chewing is a change of mouth and jaw shape, and no transform
+  produces it. Two frames is enough — pixel art reads chewing from a 2-frame
+  loop, and a third adds cost without adding legibility.
+- **Clean → shaking.** A rapid low-amplitude horizontal wobble on the `bath`
+  sprite (±3–4px, ~90ms period, decaying). Deliberately **CSS-only, no
+  second frame**: a whole-body shake *is* a rigid-body transform, so a
+  transform is the honest implementation rather than a fake. Contrast with
+  chewing above — the test is whether the shape changes or merely moves.
+- **Play → bounce.** Same reasoning as the shake: an existing vertical
+  transform on the `play` sprite, no second frame.
+
+Item sprites are **32×32, on the shared palette, and species-independent** —
+one apple/food item, one soap-and-bubbles, one ball, reused across all six
+species. Three sprites total, no per-species multiplication.
+
+Where an item lands is per-species, since a hippocampus's mouth is nowhere
+near a T-Rex's: extend the accessory anchor config with an `item` slot, so
+the food arrives at the mouth and the suds land over the body. Suds may also
+sit as a persistent overlay for the reaction phase rather than vanishing on
+contact.
+
+Deliberately out of scope for now: Sleep gets no travelling item (nothing is
+being applied to the pet — the pet changes state), and no action gets a
+screen-shake, flash, or particle burst. The tone in §1 is calm and cozy;
+these should read as gentle, not as combat feedback.
+
+### Fallback chain
+
+`SPECIES_POSES` in `pet/index.html` lists only files that exist. Anything
+missing walks `POSE_FALLBACK` until it reaches `idle`, which is the one pose
+a species may not ship without:
+
+```
+eat-chew → eat → happy → idle
+eat      → happy → idle
+play     → happy → idle
+bath     → idle
+sad      → idle
+sleep    → idle
+```
+
+`eat-chew` falling back to `eat` degrades gracefully on its own terms: both
+frames of the chew loop resolve to the same sprite, so the mouth simply
+doesn't move and nothing flickers. The travelling item and the other two
+reaction loops are CSS, so they work regardless of which poses exist — the
+approach phase is worth building before any pose art lands.
+
+When a pose resolves exactly, the stage gets `pose-<name>`. When it falls
+back, it also gets `pose-fallback`, and **only then** do the old CSS fakes
+(desaturate-on-sad, dim-on-sleep, droop rotation) apply — real pose art must
+not be filtered on top of what the artist already drew.
+
+### Adding a pose
+
+1. Draw/generate it to the style constraints above; save as
+   `pet/assets/<species>-<pose>.png`. (`idle` keeps the bare
+   `pet/assets/<species>.png` name it shipped with.)
+2. Add the one-line entry to `SPECIES_POSES` in `pet/index.html`. The
+   manifest is explicit on purpose — deriving paths by convention would 404
+   into a broken-image icon for every pose not yet drawn.
+3. Check it with `pet/index.html?pose=<pose>`, which pins that pose and its
+   mood so the art can be reviewed without starving the pet into the state.
+
+Sprites ≤128px wide automatically get `image-rendering: pixelated` on load,
+so conforming 64×64 art upscales crisply while the legacy 640px stills keep
+smooth downscaling. That detection is transitional and can be dropped once
+every asset is 64×64.
+
+### Layering
 
 Rendering is layered, back to front:
 1. Location/background image (behind everything)
-2. Base species sprite, with a CSS `hue-rotate`/`saturate` filter applied
-   for the chosen color variant (avoids needing a separately generated
-   image per color)
-3. Accessory overlays (hat, scarf, etc.), positioned via a small per-species
-   anchor config (`{ species, stage } → { slot: {x, y, scale} }`)
-4. Mood-driven CSS animation/filters on top (bounce, sparkle, droop, Zzz)
+2. Species pose sprite for the current state, tinted for the chosen color
+   variant (see §5)
+3. Accessory overlays (hat, scarf, etc.), positioned via a per-species
+   anchor config — now keyed `{ species, stage, pose } → { slot: {x, y,
+   scale} }`, since an accessory sits differently on a standing pet than a
+   sleeping one
+4. State effects on top (sparkle, Zzz, dirt smudges)
 
-Additional sprites needed over time: one base image per species per
-lifecycle stage (egg/hatchling/young/teen/adult), plus one image per
-accessory item. Locations are just background images — no per-species work.
+Additional sprites needed over time: the pose set per species per lifecycle
+stage (egg/hatchling/young/teen/adult), plus one image per accessory item.
+Egg stage needs only `idle`. Locations are just background images — no
+per-species work.
 
 ## 5. End-state feature breakdown
 
@@ -129,12 +270,22 @@ whatever's unlocked.
 
 ### Color/variation at species selection
 At creation, alongside picking species, the kid picks a color variant
-(stored as a hue value or named preset). Applied at render time as a CSS
-filter over the one base sprite — not a separate generated image per color.
-Trade-off: hue-rotate can slightly shift incidental colors (e.g. teeth,
-mouth interior) along with the intended body color; acceptable for a
-cosmetic kids' feature, and avoids multiplying the art-generation workload
-by every color × species combination.
+(stored as a named preset).
+
+Originally specced as a CSS `hue-rotate` filter over the base sprite. That
+no longer holds once §4 locks a shared palette: hue-rotating by an arbitrary
+angle produces colors that are by definition off-palette, and it discolors
+incidental parts (teeth, eye whites, mouth interior) along with the intended
+body color — visible on the current unicorn, whose gold hooves and horn shift
+with its mane.
+
+Instead, each species ships **2–3 hand-picked palette swaps**: a small map of
+`{ source palette index → replacement palette index }` per variant, applied
+once per sprite at load time on an offscreen canvas and cached. Bounded work
+(2–3 short mappings per species, not an image per color × species), stays on
+palette, and leaves the parts that shouldn't change alone. Because it's a
+palette remap rather than a filter, it applies uniformly across every pose
+without per-pose tuning.
 
 ### Simultaneous own + sibling pet during visits
 The one item here with real backend weight. Visiting a sibling means
@@ -172,8 +323,14 @@ Fire OS kid profile). Family-level passcode gates the Worker API.
 
 1. **MVP (in progress)**: single pet, stats/mood engine, species picker,
    local persistence — this is `pet/index.html` today.
-2. **Real art**: swap placeholder shapes for AI-generated species stills
-   (T-Rex, unicorn, more later), mood faked via CSS over the one image.
+2. **Real art (in progress)**: pose-swapping renderer and fallback chain are
+   built. Remaining, in order: commit the shared palette; draw the four
+   required poses per species (`sleep` first — it's the one whose absence is
+   currently most obvious); build the travelling-item choreography and the
+   shake/bounce loops (CSS, no art dependency); draw the four action poses
+   including the `eat-chew` second frame and the three shared item sprites;
+   then re-cut the six placeholder stills to 64×64 so the whole set conforms
+   to §4.
 3. **Cloudflare backend**: Workers + D1 + Durable Objects, family/kid
    profiles, passcode auth, cross-device sync.
 4. **Social v1**: read-only visiting, once-daily helper actions, gifting,
