@@ -14,12 +14,15 @@ A Tamagotchi-style virtual pet app for four siblings, built as a web app/PWA
   pegasus, hippocampus, phoenix, griffin, and dragon (`pet/assets/`); slime/blob is
   still placeholder SVG art — see Art pipeline below. Species is chosen
   once at first launch and then locked for that pet — see Species selection
-  below.
+  below. T-Rex, unicorn, dragon, hippocampus, and pegasus are the kept
+  roster (all five conform to the Art pipeline rules below); phoenix and
+  griffin are legacy placeholders slated for removal, not yet acted on.
 - Mood- and action-driven **pose swapping**: the renderer picks a distinct
   drawn sprite per state (idle/happy/sad/sleep + eat/play/bath) from the
   `SPECIES_POSES` manifest, falling back to `idle` for any pose not yet
-  drawn — see Art pipeline below. Only `idle` exists today for the six
-  raster species, so the fallback is currently doing all the work.
+  drawn — see Art pipeline below. The five kept species each have all four
+  required poses (idle/happy/sad/sleep); action poses (eat/play/bath) are
+  still unbuilt for all of them, so the fallback chain does that work.
 - `localStorage` persistence.
 
 Everything below is the target end-state, to be built in phases on top of
@@ -148,18 +151,16 @@ generating `dragon`'s action poses next.
 128×128/81%-fill registration), it just predates this paragraph being
 written up.
 
-`hippocampus.png` (idle) is the newest conforming asset, and — alongside
-T-Rex, dragon, and unicorn — the four species being kept; the previous
-griffin/pegasus/phoenix placeholder stills and the old 471×640 hippocampus
-painting are being retired. Generated as a single pose (no sheet, no
-conforming reference to attach yet), so crop window and palette were derived
-fresh, same as dragon's first pose: rows 13–116 (104px tall, 81% canvas
-fill), matching the T-Rex/dragon baseline registration. Small fins were added
-on the back of each front leg, above the hoof, to read as seahorse anatomy
-consistent with the tail and mane fins. The raw generation came back
-noticeably softer/gradient-shaded than T-Rex and dragon's source art — two
-rounds of prompting to push flatter cel-shading closed most of that gap, and
-the remainder was closed in cleanup: quantized to a 10-colour teal/aqua ramp
+`hippocampus.png` (idle) is a conforming asset built the same way as dragon's
+first pose: generated as a single pose (no sheet, no conforming reference to
+attach yet), so crop window and palette were derived fresh — rows 13–116
+(104px tall, 81% canvas fill), matching the T-Rex/dragon baseline
+registration. Small fins were added on the back of each front leg, above the
+hoof, to read as seahorse anatomy consistent with the tail and mane fins.
+The raw generation came back noticeably softer/gradient-shaded than T-Rex
+and dragon's source art — two rounds of prompting to push flatter
+cel-shading closed most of that gap, and the remainder was closed in
+cleanup: quantized to a 10-colour teal/aqua ramp
 (`reference/hippocampus-palette.txt`/`.png`), with the near-black
 quantization cluster collapsed to one hue-shifted dark-teal outline rather
 than left as several near-duplicate near-blacks. Fewer colours than T-Rex/
@@ -206,13 +207,83 @@ repeat of the sad-pose cropping bug.
 sleep, 4x, 2048×512) and is what gets attached when generating
 `hippocampus`'s action poses (`eat`/`eat-chew`/`play`/`bath`) next.
 
-The griffin, pegasus, and phoenix stills predate these rules — they're
-471–640px, anti-aliased, gradient-shaded, and inconsistent in camera angle
-(the griffin painterly ¾, formerly the unicorn full side). Now that the kept
-roster is decided to be T-Rex/unicorn/dragon/hippocampus, these three are
-proof-of-concept placeholders slated to be dropped rather than re-cut — that
-removal (species picker, `SPECIES_POSES`, and the asset files themselves)
-just hasn't been done yet.
+`pegasus.png` (idle) replaces the old placeholder outright rather than being
+re-cut from it — the legacy still was a ~600px anti-aliased white-and-gold
+side-ish illustration with a plain dark outline, none of which conforms.
+The new one is a from-scratch conforming asset, built the same way `dragon`
+was: generated as a single pose (no sheet, no prior reference) on a flat
+magenta background, then cleaned up (magenta-tolerant flood fill from the
+border, box-filter downsample, crop to the shared 128×128/row-14–117
+registration, median-cut to 20 colours). Two raw-quantization artifacts
+needed a manual fix before committing: the anti-aliased boundary ring had
+picked up a magenta-shifted maroon tint instead of a true outline colour,
+and the pupil quantized to pure black — both recoloured to hue-shifted dark
+browns per the cleanup pass's step 6, consistent with how every other
+species avoids literal `#000000`. Colour family is palomino: golden-tan
+coat against a lighter flaxen-cream mane/tail/wings/hooves, the same
+two-tone-within-one-hue-family pattern as the pink-on-pink unicorn and the
+purple-on-blue dragon. `reference/pegasus-palette.txt`/`.png` hold the
+locked 20-colour ramp and `reference/pegasus-reference-4x.png` is what gets
+attached when generating `pegasus`'s `happy`/`sad`/`sleep` poses next.
+
+`pegasus-happy.png` followed: raised/spread wings, a lifted front hoof,
+and an open-mouth smile, generated on its own attaching the idle reference
+and independently scaled per step 4 (its raw silhouette ran wider than
+idle's, from the spread wings and raised leg, but the topmost point was
+still the same forelock cowlick as idle in both, confirming the height
+anchor held) — landed on the exact same top/bottom rows as idle (14–117,
+104px tall) with no adjustment needed. Ghost-overlay verified the head
+reads the same scale as idle before quantizing onto the *locked*
+`pegasus-palette.txt` rather than deriving a new one; every opaque pixel
+mapped onto an existing palette entry with no new colours and no stray
+near-black. `reference/pegasus-reference-4x.png` now holds both poses
+(idle/happy, 4x) and is what gets attached when generating `sad` next.
+
+`pegasus-sad.png` needed a real fix mid-pipeline, not just a scale
+judgment call: the border flood fill (adaptive per-step colour-distance,
+the method that had worked cleanly for idle and happy) tunnelled through
+a smooth highlight gradient on the body and ate most of the interior,
+leaving only outline strokes — visible immediately as a speckled,
+mostly-transparent result once quantized. Root cause was the same one the
+cleanup pass's step 2 already warns about for outline gaps: an adaptive
+neighbour-distance rule has no fixed floor, so a long enough chain of
+small steps crosses the whole body. Fixed by reclassifying background with
+a fixed rule (green channel < 55, since magenta's is ~0–4 and every body
+and outline colour here is well above that) inside the same border-flood
+fill, which keeps the connectivity property (isolated dark interior
+pixels — the pupil, eyebrow lines — can't be reached from the border) while
+removing the gradient-tunnelling failure mode.
+
+Scale was the second issue: this pose's raw silhouette (head drooped, wings
+folded low) is genuinely shorter than idle's, not just differently cropped,
+so matching idle's exact 104px height would have inflated the whole body —
+confirmed by overlaying idle's traced outline on candidates at a few
+heights, where 104px sat visibly outside the sad body's legs and 97px
+(76% canvas fill, still inside the 75–85% band) tracked them closely.
+Landed on the same bottom row (117) as idle and happy, so the ground line
+still holds. `reference/pegasus-reference-4x.png` now holds all three
+poses (idle/happy/sad, 4x) and is what gets attached when generating
+`sleep` next, the last pose in the required tier.
+
+`pegasus-sleep.png` completed the required tier. The same fixed-threshold
+border flood fill used for `sad` carried over cleanly here (no gradient
+leak this time either). Curled poses scale by *width*, not height, per the
+same reasoning as `trex-sleep`/`dragon-sleep`: this pose's raw silhouette
+already landed at 80.3% width fill without any correction needed, scaled
+to 104px wide (81.25%, matching `trex-sleep`'s 81.2% almost exactly) and
+placed on the same bottom row (117) as the other three poses. `pegasus`
+now has all four required poses. `reference/pegasus-reference-4x.png`
+holds all four (idle/happy/sad/sleep, 4x) and is what gets attached when
+generating `pegasus`'s action poses next.
+
+`hippocampus` and `pegasus` were built out to these rules independently, in
+parallel. Both are keepers — the roster is **T-Rex, unicorn, dragon,
+hippocampus, and pegasus**, all five now at the required four-pose tier.
+`griffin` and `phoenix` are the ones being dropped: their stills predate
+these rules — 471–640px, anti-aliased, gradient-shaded, and inconsistent in
+camera angle (the griffin painterly ¾, formerly the unicorn full side) —
+and won't be re-cut. That removal (species picker, `SPECIES_POSES`, and the
+asset files themselves) hasn't been done yet.
 
 ### Cleanup pass for generated art
 
