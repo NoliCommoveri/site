@@ -191,9 +191,20 @@ visible teal rectangle behind the creature. Re-run correctly (key to alpha
 all 10 locked palette colours with no rectangle. Worth watching for on
 future poses since it's an easy step to skip by accident.
 
-`reference/hippocampus-reference-4x.png` is a growing sheet (currently
-1536×512, idle/happy/sad at 4x each) and is what gets attached when
-generating the remaining required pose, `sleep`.
+`hippocampus-sleep.png` completed the required tier. Curled poses need the
+different scaling approach flagged above: scaled by *width* rather than
+height, landing at 80.5% width fill (bbox 103px wide within the 128
+canvas) — matching what `trex-sleep.png` and `dragon-sleep.png` both
+independently landed on (80.5% width fill exactly) — with the same bottom
+row (116) as the other three hippocampus poses, ground line held.
+Ghost-overlay verified the head reads the same scale as idle before
+quantizing onto the locked palette; all 10 colours got used again, no
+repeat of the sad-pose cropping bug.
+
+`hippocampus` now has all four required poses.
+`reference/hippocampus-reference-4x.png` holds all four (idle/happy/sad/
+sleep, 4x, 2048×512) and is what gets attached when generating
+`hippocampus`'s action poses (`eat`/`eat-chew`/`play`/`bath`) next.
 
 The griffin, pegasus, and phoenix stills predate these rules — they're
 471–640px, anti-aliased, gradient-shaded, and inconsistent in camera angle
