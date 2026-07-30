@@ -78,8 +78,19 @@ a creature down. Distinct pose art is the deliverable.
 
 Every sprite, for every species and pose, must satisfy:
 
-- **64×64 canvas**, creature filling roughly 75–85% of it, leaving room for
+- **128×128 canvas**, creature filling roughly 75–85% of it, leaving room for
   tails/wings/ears/effects. Never crop body parts.
+
+  Relaxed from the style bible's 64×64 deliberately. Two measurements drove
+  it: the app renders the pet at `max-width: 220px`, and generated output
+  lands at ~150px of native detail per creature (measured: the dominant
+  pixel-block run length in the first T-Rex sheet was 2px across a 384px
+  cell, so a ~192×256 native grid). Forcing that down to 64 destroys the
+  shading and small features — teeth, claws, eye highlights — and means
+  redrawing rather than cleaning up. 128 is still crisp at 220px display, is
+  close to what the generator natively produces, and cuts the cleanup cost
+  per asset substantially. The cost is that it reads less chunky-retro than
+  a true 16-bit 64×64 sprite would.
 - **One shared palette** across all sprites, environments, UI, and effects.
   Committed as a file, not held in someone's head.
 - **Three-quarter view, ~20–30° rotation**, facing slightly toward the
@@ -96,13 +107,43 @@ Every sprite, for every species and pose, must satisfy:
   or resize. This is the constraint most likely to be violated by generating
   each pose as an independent image, and the most jarring when it is.
 
-The six stills currently in `pet/assets/` predate these rules — they're
-471–640px, anti-aliased, gradient-shaded, and inconsistent in camera angle
-(the T-Rex is near-profile, the griffin painterly ¾, the unicorn full side).
-They are proof-of-concept placeholders, not conforming assets. Some also came
-back from the generator with an opaque or faux-checkerboard background
-instead of real alpha, and were cleaned up with a flood-fill background
-removal pass before being cropped and added.
+`trex.png` and `trex-happy.png` are the first conforming assets: 128×128,
+20-colour shared palette, identical scale and ground line (baseline row 117,
+creature 104px tall = 81% of canvas), hue-shifted outline. They came from
+cells 1–2 of a generated 8-pose sheet, via the cleanup below.
+
+The other five stills still predate these rules — they're 471–640px,
+anti-aliased, gradient-shaded, and inconsistent in camera angle (the griffin
+painterly ¾, the unicorn full side). They are proof-of-concept placeholders,
+not conforming assets, and need re-cutting.
+
+### Cleanup pass for generated art
+
+What a raw generated sheet needs before it is an asset, in order — each step
+exists because the first T-Rex sheet failed it:
+
+1. **Threshold alpha** to 0/255. Generated output is near-binary already
+   (that sheet: 68% at alpha 0, most of the rest ≥224) but carries a haze of
+   ~250k partial-alpha pixels that must not survive.
+2. **Flood-fill from the border, treating the dark outline as a wall**, to
+   separate creature from background. **Dilate the outline by 1px first** —
+   undilated, a hairline gap in one cell's outline let the fill into the body
+   and ate 40k pixels of it.
+3. **Remove baked ground/shadow.** The generator draws a tan ground patch
+   that *overlaps* the toes, so cropping by row would cut feet off. In that
+   band the legs are green (`g` is the max channel) and the ground is warm
+   tan (`r` max, `r > b+35`, luminance 70–225) — that separates them.
+4. **One shared crop window across all poses of a species**, not each
+   sprite's own bounding box. This is what actually enforces pose
+   registration: identical scale, identical ground line, and the generator's
+   own relative placement inside the cell preserved.
+5. **Downsample by box filter with ≥50% coverage** keeping a pixel, so edges
+   stay hard, then **median-cut to ~20 colours built from all poses at once**
+   so a species' poses cannot drift apart in palette.
+6. **Recolour near-black palette entries** to the hue-shifted outline colour.
+
+Verify with `?pose=<name>` and check that the baseline row does not move
+between poses.
 
 ### Pose set
 
@@ -157,9 +198,14 @@ Reaction loops, per action:
 - **Play → bounce.** Same reasoning as the shake: an existing vertical
   transform on the `play` sprite, no second frame.
 
-Item sprites are **32×32, on the shared palette, and species-independent** —
+Item sprites are **64×64, on the shared palette, and species-independent** —
 one apple/food item, one soap-and-bubbles, one ball, reused across all six
-species. Three sprites total, no per-species multiplication.
+species. Three sprites total, no per-species multiplication. (Half the
+creature canvas, scaled with it when the canvas rule changed.)
+
+Items must be **separate files**, never drawn into a pose. The first
+generated sheet baked food into four of its eight cells, which breaks the
+approach phase entirely — there is nothing left to fly in.
 
 Where an item lands is per-species, since a hippocampus's mouth is nowhere
 near a T-Rex's: extend the accessory anchor config with an `item` slot, so
@@ -198,6 +244,28 @@ back, it also gets `pose-fallback`, and **only then** do the old CSS fakes
 (desaturate-on-sad, dim-on-sleep, droop rotation) apply — real pose art must
 not be filtered on top of what the artist already drew.
 
+### Generating poses
+
+Do **not** ask for all eight poses in one sheet. Tried once: the generator
+held the requested pose and registration for exactly two cells, then drifted
+— cells 3–8 came back as five variations on "lying down near food", with no
+`sad`, `sleep`, `play`, or `bath` at all, and height varying 30% with the
+ground line moving 14%.
+
+Instead, treat a cleaned `idle` as canonical and **attach it as a reference
+image, requesting 1–2 poses per call**, stating explicitly that canvas, scale,
+and ground line must match the reference. Also:
+
+- Say **"creature only — no food, no props, no grass, no ground, no shadow"**.
+- Ask for a flat **magenta `#FF00FF` background** rather than transparency.
+  Transparency mostly works but leaves a haze, and for a green creature that
+  haze is green — the hardest possible case to key.
+- For `sad`, name the stance or it collapses into lying down: *"standing
+  upright on both feet, weight back, head lowered slightly, tail drooping,
+  eyes half-closed"*.
+- For `eat-chew`, don't request a pose. Attach the finished `eat` frame and
+  ask for *"this exact image, unchanged, with only the jaw closed"*.
+
 ### Adding a pose
 
 1. Draw/generate it to the style constraints above; save as
@@ -210,9 +278,9 @@ not be filtered on top of what the artist already drew.
    mood so the art can be reviewed without starving the pet into the state.
 
 Sprites ≤128px wide automatically get `image-rendering: pixelated` on load,
-so conforming 64×64 art upscales crisply while the legacy 640px stills keep
-smooth downscaling. That detection is transitional and can be dropped once
-every asset is 64×64.
+so conforming 128×128 art upscales crisply at the 220px display size while
+the legacy 471–640px stills keep smooth downscaling. That detection is
+transitional and can be dropped once every asset is 128×128.
 
 ### Layering
 
