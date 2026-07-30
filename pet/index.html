@@ -79,8 +79,25 @@
     font-weight: 600;
   }
 
+  .species-picker {
+    display: none;
+    text-align: center;
+    padding: 1rem 0 0.5rem;
+  }
+  .picker-title {
+    margin-bottom: 0.35rem;
+  }
+  .picker-hint {
+    margin: 0 0 1rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .app-body { display: none; }
+
   .species-row {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 0.5rem;
     margin-bottom: 1rem;
@@ -114,16 +131,24 @@
     overflow: hidden;
   }
 
-  #pet-svg {
-    display: block;
+  .pet-visual {
+    display: none;
     width: 70%;
     max-width: 220px;
     margin: 0 auto;
     animation: bob 2.6s ease-in-out infinite;
   }
-  .mood-happy #pet-svg { animation-duration: 1.3s; }
-  .mood-sad #pet-svg { animation: droop-bob 3.4s ease-in-out infinite; }
-  .mood-sleeping #pet-svg { animation: bob 4.5s ease-in-out infinite; opacity: 0.92; }
+  #pet-sprite { object-fit: contain; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.12)); }
+  .species-blob #pet-svg { display: block; }
+  .species-trex #pet-sprite,
+  .species-unicorn #pet-sprite,
+  .species-hippocampus #pet-sprite,
+  .species-pegasus #pet-sprite,
+  .species-phoenix #pet-sprite,
+  .species-griffin #pet-sprite { display: block; }
+  .mood-happy .pet-visual { animation-duration: 1.3s; }
+  .mood-sad .pet-visual { animation: droop-bob 3.4s ease-in-out infinite; }
+  .mood-sleeping .pet-visual { animation: bob 4.5s ease-in-out infinite; opacity: 0.92; }
 
   @keyframes bob {
     0%, 100% { transform: translateY(0); }
@@ -152,19 +177,32 @@
   .mood-sleeping .mouth-sleeping { display: block; }
 
   .body-shape { fill: url(#bodyGradient); transition: filter 0.4s ease; }
-  .species-trex .body-shape { fill: url(#bodyGradientTrex); }
-  .species-unicorn .body-shape { fill: url(#bodyGradientUnicorn); }
-  .mood-sad .body-shape { filter: grayscale(35%) brightness(0.95); }
-
-  .dirt-spot { display: none; }
-  .dirty .dirt-spot { display: block; }
+  .mood-sad .pet-visual { filter: grayscale(35%) brightness(0.95); }
 
   .accessory { display: none; }
   .species-blob .accessory-blob { display: block; }
-  .species-trex .accessory-trex { display: block; }
-  .species-unicorn .accessory-unicorn { display: block; }
 
-  .zzz { display: none; }
+  .overlay-dirt {
+    position: absolute;
+    width: 20px;
+    height: 12px;
+    background: #8a6a45;
+    opacity: 0.55;
+    border-radius: 50%;
+    display: none;
+    pointer-events: none;
+  }
+  .dirty .overlay-dirt { display: block; }
+
+  .zzz {
+    position: absolute;
+    left: 70%;
+    top: 22%;
+    font-size: 20px;
+    color: #6b6258;
+    display: none;
+    pointer-events: none;
+  }
   .mood-sleeping .zzz { display: block; animation: float-up 2.4s ease-in-out infinite; }
   @keyframes float-up {
     0% { transform: translate(0, 0); opacity: 0; }
@@ -172,7 +210,12 @@
     100% { transform: translate(10px, -22px); opacity: 0; }
   }
 
-  .sparkle { display: none; }
+  .sparkle {
+    position: absolute;
+    font-size: 18px;
+    display: none;
+    pointer-events: none;
+  }
   .mood-happy .sparkle { display: block; animation: sparkle-pop 1.3s ease-in-out infinite; }
   @keyframes sparkle-pop {
     0%, 100% { opacity: 0; transform: scale(0.6); }
@@ -260,6 +303,21 @@
 </head>
 <body>
   <div class="app">
+    <div class="species-picker" id="species-picker">
+      <h1 class="picker-title">Choose your pet!</h1>
+      <p class="picker-hint">Pick carefully — this is who you'll be raising.</p>
+      <div class="species-row" id="species-row">
+        <button class="species-btn" data-species="blob"><span class="emoji">🟢</span> Slime</button>
+        <button class="species-btn" data-species="trex"><span class="emoji">🦖</span> T-Rex</button>
+        <button class="species-btn" data-species="unicorn"><span class="emoji">🦄</span> Unicorn</button>
+        <button class="species-btn" data-species="pegasus"><span class="emoji">🪽</span> Pegasus</button>
+        <button class="species-btn" data-species="hippocampus"><span class="emoji">🌊</span> Hippocampus</button>
+        <button class="species-btn" data-species="phoenix"><span class="emoji">🔥</span> Phoenix</button>
+        <button class="species-btn" data-species="griffin"><span class="emoji">🦅</span> Griffin</button>
+      </div>
+    </div>
+
+    <div class="app-body" id="app-body">
     <div class="name-row">
       <h1 id="pet-name-display">Widget</h1>
       <button class="rename-btn" id="rename-toggle" aria-label="Rename pet">✏️</button>
@@ -269,26 +327,12 @@
       <button type="submit">Save</button>
     </form>
 
-    <div class="species-row" id="species-row">
-      <button class="species-btn" data-species="blob"><span class="emoji">🟢</span> Slime</button>
-      <button class="species-btn" data-species="trex"><span class="emoji">🦖</span> T-Rex</button>
-      <button class="species-btn" data-species="unicorn"><span class="emoji">🦄</span> Unicorn</button>
-    </div>
-
     <div class="stage" id="stage">
-      <svg id="pet-svg" viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
+      <svg id="pet-svg" class="pet-visual" viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="bodyGradient" cx="35%" cy="30%" r="75%">
             <stop offset="0%" stop-color="#c8f2e0"/>
             <stop offset="100%" stop-color="#5fb8a6"/>
-          </radialGradient>
-          <radialGradient id="bodyGradientTrex" cx="35%" cy="30%" r="75%">
-            <stop offset="0%" stop-color="#e3f2b8"/>
-            <stop offset="100%" stop-color="#6ea852"/>
-          </radialGradient>
-          <radialGradient id="bodyGradientUnicorn" cx="35%" cy="30%" r="75%">
-            <stop offset="0%" stop-color="#fff7fb"/>
-            <stop offset="100%" stop-color="#e2c6ec"/>
           </radialGradient>
         </defs>
 
@@ -300,43 +344,8 @@
           <circle cx="135" cy="10" r="5" fill="#f4a6c1"/>
         </g>
 
-        <!-- t-rex accessories (behind body: tail + back ridges peek out) -->
-        <g class="accessory accessory-trex">
-          <path d="M96,29 L102,9 L109,29 Z" fill="#4d8a3d"/>
-          <path d="M113,26 L120,4 L127,26 Z" fill="#4d8a3d"/>
-          <path d="M130,29 L136,10 L143,29 Z" fill="#4d8a3d"/>
-          <path d="M163,163 C189,168 206,184 197,201 C187,195 168,187 156,176 Z" fill="#6ea852"/>
-        </g>
-
-        <!-- unicorn accessories (behind body: mane + tail peek out) -->
-        <g class="accessory accessory-unicorn">
-          <path d="M60,48 C40,58 35,82 46,103 C35,92 26,72 36,52 C43,42 56,41 60,48 Z" fill="#f4a6c1"/>
-          <path d="M55,63 C39,74 36,97 49,115 C37,105 29,87 39,67 C46,58 55,58 55,63 Z" fill="#c9a6f4" opacity="0.9"/>
-          <path d="M150,152 C171,158 181,177 168,193 C179,181 182,161 165,150 C158,146 150,148 150,152 Z" fill="#f4a6c1"/>
-          <path d="M145,163 C164,171 171,188 157,201 C167,190 169,172 154,163 C149,160 145,160 145,163 Z" fill="#a6d8f4" opacity="0.9"/>
-        </g>
-
         <!-- body -->
         <path class="body-shape" d="M100,25 C150,25 178,65 178,112 C178,162 143,190 100,190 C57,190 22,162 22,112 C22,65 50,25 100,25 Z"/>
-
-        <!-- t-rex arms + feet (in front of body edge) -->
-        <g class="accessory accessory-trex">
-          <ellipse cx="38" cy="135" rx="10" ry="6" fill="#4d8a3d" transform="rotate(-20 38 135)"/>
-          <ellipse cx="162" cy="135" rx="10" ry="6" fill="#4d8a3d" transform="rotate(20 162 135)"/>
-        </g>
-
-        <!-- unicorn horn + ears -->
-        <g class="accessory accessory-unicorn">
-          <path d="M72,37 L61,12 L82,30 Z" fill="#fdf1f7"/>
-          <path d="M128,37 L139,12 L118,30 Z" fill="#fdf1f7"/>
-          <path d="M100,28 L94,2 L108,10 Z" fill="#ffd76a"/>
-          <path d="M97,20 L104,15" stroke="#e8a93a" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M96,13 L102,9" stroke="#e8a93a" stroke-width="1.5" stroke-linecap="round"/>
-        </g>
-
-        <!-- dirt spots -->
-        <ellipse class="dirt-spot" cx="60" cy="140" rx="10" ry="6" fill="#8a6a45" opacity="0.55"/>
-        <ellipse class="dirt-spot" cx="130" cy="150" rx="8" ry="5" fill="#8a6a45" opacity="0.45"/>
 
         <!-- cheeks -->
         <ellipse cx="60" cy="120" rx="12" ry="8" fill="#ffb6c1" opacity="0.6"/>
@@ -359,14 +368,15 @@
         <path class="mouth mouth-happy" d="M84,124 Q100,144 116,124" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
         <path class="mouth mouth-sad" d="M86,134 Q100,120 114,134" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
         <path class="mouth mouth-sleeping" d="M92,128 Q100,131 108,128" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/>
-
-        <!-- sparkles -->
-        <text class="sparkle" x="30" y="70" font-size="18">✨</text>
-        <text class="sparkle" x="150" y="60" font-size="14">✨</text>
-
-        <!-- zzz -->
-        <text class="zzz" x="140" y="55" font-size="20" fill="#6b6258">Z</text>
       </svg>
+
+      <img id="pet-sprite" class="pet-visual" alt="">
+
+      <div class="overlay-dirt" style="left: 34%; top: 76%;"></div>
+      <div class="overlay-dirt" style="left: 58%; top: 80%;"></div>
+      <span class="sparkle" style="left: 15%; top: 30%;">✨</span>
+      <span class="sparkle" style="left: 72%; top: 22%;">✨</span>
+      <span class="zzz">Z</span>
     </div>
 
     <p class="status" id="status-text"></p>
@@ -402,6 +412,7 @@
     </div>
 
     <p class="note">Your pet's care is saved on this device.</p>
+    </div>
   </div>
 
 <script>
@@ -418,7 +429,9 @@
   function defaultState() {
     return {
       name: null,
-      species: 'blob',
+      // Chosen once at launch and then locked — see SPEC.md "Species
+      // selection" for the future points-gated switching plan.
+      species: null,
       hunger: 80,
       happiness: 80,
       energy: 80,
@@ -478,7 +491,19 @@
     neutral: 'Doing okay.'
   };
 
+  var SPECIES_SPRITES = {
+    trex: 'assets/trex.png',
+    unicorn: 'assets/unicorn.png',
+    pegasus: 'assets/pegasus.png',
+    hippocampus: 'assets/hippocampus.png',
+    phoenix: 'assets/phoenix.png',
+    griffin: 'assets/griffin.png'
+  };
+
+  var speciesPicker = document.getElementById('species-picker');
+  var appBody = document.getElementById('app-body');
   var stage = document.getElementById('stage');
+  var petSprite = document.getElementById('pet-sprite');
   var statusText = document.getElementById('status-text');
   var nameDisplay = document.getElementById('pet-name-display');
   var btnFeed = document.getElementById('btn-feed');
@@ -494,8 +519,21 @@
   var state = loadState();
 
   function render() {
+    if (!state.species) {
+      speciesPicker.style.display = 'block';
+      appBody.style.display = 'none';
+      return;
+    }
+    speciesPicker.style.display = 'none';
+    appBody.style.display = 'block';
+
     var mood = getMood(state);
     stage.className = 'stage mood-' + mood + ' species-' + state.species + (state.cleanliness < 35 ? ' dirty' : '');
+
+    if (SPECIES_SPRITES[state.species]) {
+      petSprite.src = SPECIES_SPRITES[state.species];
+      petSprite.alt = (state.name || 'Your pet') + ' the ' + state.species;
+    }
 
     speciesButtons.forEach(function (btn) {
       btn.classList.toggle('active', btn.dataset.species === state.species);
@@ -527,11 +565,11 @@
   }
 
   function flash() {
-    var svg = document.getElementById('pet-svg');
-    svg.classList.remove('action-flash');
+    var visual = state.species === 'blob' ? document.getElementById('pet-svg') : petSprite;
+    visual.classList.remove('action-flash');
     // force reflow so the animation can restart on repeated taps
-    void svg.offsetWidth;
-    svg.classList.add('action-flash');
+    void visual.offsetWidth;
+    visual.classList.add('action-flash');
   }
 
   function doAction(fn) {
@@ -579,6 +617,9 @@
 
   speciesButtons.forEach(function (btn) {
     btn.addEventListener('click', function () {
+      // One-time pick: species is locked in once chosen. A future unlock
+      // mechanism (see SPEC.md) can lift this guard to allow re-picking.
+      if (state.species) return;
       state.species = btn.dataset.species;
       saveState();
       render();
