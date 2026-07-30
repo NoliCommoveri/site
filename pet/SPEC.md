@@ -11,7 +11,7 @@ A Tamagotchi-style virtual pet app for four siblings, built as a web app/PWA
   while the tablet is closed.
 - Actions: Feed, Play, Clean, Sleep.
 - Species picker: real AI-generated pixel-art stills for T-Rex, unicorn,
-  pegasus, hippocampus, phoenix, and griffin (`pet/assets/`); slime/blob is
+  pegasus, hippocampus, phoenix, griffin, and dragon (`pet/assets/`); slime/blob is
   still placeholder SVG art — see Art pipeline below. Species is chosen
   once at first launch and then locked for that pet — see Species selection
   below.
@@ -111,6 +111,16 @@ Every sprite, for every species and pose, must satisfy:
 20-colour shared palette, identical scale and ground line (baseline row 117,
 creature 104px tall = 81% of canvas), hue-shifted outline. They came from
 cells 1–2 of a generated 8-pose sheet, via the cleanup below.
+
+`dragon.png` (idle) is the second conforming asset and the first *new*
+species built to these rules from the start: 128×128, purple/blue 19-colour
+palette (`reference/dragon-palette.txt`/`.png`), same baseline row 117 and
+81% canvas fill as the T-Rex registration, hue-shifted outline. It was
+generated as a single pose (no sheet, no reference image to attach — nothing
+existed yet for this species), so the cleanup pipeline established the crop
+window and palette directly rather than inheriting one; `reference/
+dragon-idle-4x.png` now exists to attach when generating `dragon`'s next
+poses.
 
 The other five stills still predate these rules — they're 471–640px,
 anti-aliased, gradient-shaded, and inconsistent in camera angle (the griffin
