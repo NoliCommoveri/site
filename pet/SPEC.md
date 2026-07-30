@@ -144,10 +144,28 @@ reads the same scale as idle before quantizing onto the locked palette.
 holds all four (idle/happy/sad/sleep, 4x) and is what gets attached when
 generating `dragon`'s action poses next.
 
-The other five stills still predate these rules — they're 471–640px,
-anti-aliased, gradient-shaded, and inconsistent in camera angle (the griffin
-painterly ¾, the unicorn full side). They are proof-of-concept placeholders,
-not conforming assets, and need re-cutting.
+`pegasus.png` (idle) replaces the old placeholder outright rather than being
+re-cut from it — the legacy still was a ~600px anti-aliased white-and-gold
+side-ish illustration with a plain dark outline, none of which conforms.
+The new one is a from-scratch conforming asset, built the same way `dragon`
+was: generated as a single pose (no sheet, no prior reference) on a flat
+magenta background, then cleaned up (magenta-tolerant flood fill from the
+border, box-filter downsample, crop to the shared 128×128/row-14–117
+registration, median-cut to 20 colours). Two raw-quantization artifacts
+needed a manual fix before committing: the anti-aliased boundary ring had
+picked up a magenta-shifted maroon tint instead of a true outline colour,
+and the pupil quantized to pure black — both recoloured to hue-shifted dark
+browns per the cleanup pass's step 6, consistent with how every other
+species avoids literal `#000000`. Colour family is palomino: golden-tan
+coat against a lighter flaxen-cream mane/tail/wings/hooves, the same
+two-tone-within-one-hue-family pattern as the pink-on-pink unicorn and the
+purple-on-blue dragon. `reference/pegasus-palette.txt`/`.png` hold the
+locked 20-colour ramp and `reference/pegasus-reference-4x.png` is what gets
+attached when generating `pegasus`'s `happy`/`sad`/`sleep` poses next.
+
+The remaining placeholder stills (hippocampus, phoenix, griffin) still
+predate these rules — 471–640px, anti-aliased, gradient-shaded, and
+inconsistent in camera angle — and are out of scope here.
 
 ### Cleanup pass for generated art
 
