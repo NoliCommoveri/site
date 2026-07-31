@@ -840,7 +840,7 @@
     var min = Math.min(s.hunger, s.happiness, s.energy);
     if (min < 20) return 'sad';
     var avg = (s.hunger + s.happiness + s.energy + s.cleanliness) / 4;
-    if (avg >= 70) return 'happy';
+    if (avg >= 90) return 'happy';
     return 'neutral';
   }
 
@@ -1584,6 +1584,7 @@
     state.happiness = clamp(state.happiness + 20);
     state.energy = clamp(state.energy - 3);
     state.hunger = clamp(state.hunger - 2);
+    state.cleanliness = clamp(state.cleanliness - 10);
   }));
 
   btnClean.addEventListener('click', doAction('clean', function () {

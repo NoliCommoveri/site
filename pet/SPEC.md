@@ -422,7 +422,7 @@ actually has. Two tiers:
 | Pose | Trigger | Depicts | Tier |
 |---|---|---|---|
 | `idle` | neutral mood | Standing, calm, eyes open, ¾ view | **required** |
-| `happy` | mood avg ≥ 70 | Bright-eyed, open mouth, lifted posture | **required** |
+| `happy` | mood avg ≥ 90 | Bright-eyed, open mouth, lifted posture | **required** |
 | `sad` | any stat < 20 | Head/ears down, drooped tail, downturned mouth | **required** |
 | `sleep` | sleep toggled on | **Lying down, eyes closed** — curled, head resting | **required** |
 | `eat` | Feed tapped | Head toward food, mouth open, jaw down | action |
