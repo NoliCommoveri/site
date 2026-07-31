@@ -224,6 +224,33 @@
     100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
   }
 
+  /* Sponge-wash bubbles: a burst of the same bubble sprites used for the
+     hatch effect (see .hatch-bubble / bubbleRise), but these rise only
+     around the pet's feet and pop partway up instead of drifting all the
+     way to the top of the stage — see spawnWashBubbles(). Own layer so
+     they keep rising independent of the item-sprite/pet-visual animations. */
+  .wash-bubbles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .wash-bubble {
+    position: absolute;
+    width: var(--bubble-size, 16px);
+    image-rendering: pixelated;
+    opacity: 0;
+    animation: bubblePop var(--bubble-dur, 1.2s) ease-out forwards;
+  }
+  @keyframes bubblePop {
+    0%   { transform: translate(0, 0) scale(0.7); opacity: 0; }
+    18%  { opacity: 0.95; }
+    48%  { opacity: 0.9; transform: translate(var(--bubble-drift, 0px), -38px) scale(0.95); }
+    60%  { transform: translate(var(--bubble-drift, 0px), -47px) scale(1.45); opacity: 0.55; }
+    68%  { transform: translate(var(--bubble-drift, 0px), -47px) scale(1.85); opacity: 0; }
+    100% { transform: translate(var(--bubble-drift, 0px), -47px) scale(1.85); opacity: 0; }
+  }
+
   .overlay-dirt {
     position: absolute;
     width: 20px;
@@ -643,6 +670,7 @@
     <div class="stage" id="stage">
       <img id="pet-sprite" class="pet-visual" alt="">
       <img id="item-sprite" class="item-sprite" alt="">
+      <div class="wash-bubbles" id="wash-bubbles"></div>
 
       <div class="overlay-dirt" style="left: 34%; top: 76%;"></div>
       <div class="overlay-dirt" style="left: 58%; top: 80%;"></div>
@@ -922,9 +950,11 @@
   // Feed/toy items are species-specific — a T-Rex gnaws a drumstick, a
   // hippocampus nibbles seaweed — so each species gets its own pair of
   // 64x64 items per action (two options, picked at random, for variety).
-  // Clean is the one action that stays a single shared sprite across all
-  // species: there's nothing species-flavored about soap and bubbles.
-  // See SPEC.md "Action choreography".
+  // Clean is the one action that stays shared across all species: there's
+  // nothing species-flavored about washing up. It still picks between two
+  // shared items rather than one, though — sponge below the cleanliness
+  // threshold, brush at/above it — so the tool a kid sees matches how
+  // dirty the pet actually is. See SPEC.md "Action choreography".
   //
   // Wolf has no item art yet (species is currently unused), so it falls
   // back to no travelling item rather than a broken image.
@@ -952,10 +982,14 @@
     wolf: { feed: [], toy: [] }
   };
 
-  var CLEAN_ITEM = 'assets/bubble-md.png';
+  var CLEAN_ITEM_SPONGE = 'assets/clean-sponge.png';
+  var CLEAN_ITEM_BRUSH = 'assets/clean-brush.png';
+  var CLEAN_ITEM_THRESHOLD = 85;
 
   function pickItem(species, action) {
-    if (action === 'clean') return CLEAN_ITEM;
+    if (action === 'clean') {
+      return state.cleanliness >= CLEAN_ITEM_THRESHOLD ? CLEAN_ITEM_BRUSH : CLEAN_ITEM_SPONGE;
+    }
     var key = action === 'feed' ? 'feed' : action === 'play' ? 'toy' : null;
     if (!key) return null;
     var list = (SPECIES_ITEMS[species] || {})[key];
@@ -1275,6 +1309,7 @@
   var stage = document.getElementById('stage');
   var petSprite = document.getElementById('pet-sprite');
   var itemSprite = document.getElementById('item-sprite');
+  var washBubbles = document.getElementById('wash-bubbles');
   var statusText = document.getElementById('status-text');
   var nameDisplay = document.getElementById('pet-name-display');
   var btnFeed = document.getElementById('btn-feed');
@@ -1487,8 +1522,15 @@
         return;
       }
       applyDecay(state);
+      // pickItem() reads state.cleanliness to choose sponge vs. brush, so it
+      // has to run before fn() — for 'clean', fn() is what sets cleanliness
+      // back to 100.
+      var itemSrc = ACTION_POSES[action] ? pickItem(state.species, action) : null;
       fn();
-      if (ACTION_POSES[action]) showActionPose(ACTION_POSES[action], pickItem(state.species, action));
+      if (ACTION_POSES[action]) {
+        showActionPose(ACTION_POSES[action], itemSrc);
+        if (action === 'clean' && itemSrc === CLEAN_ITEM_SPONGE) spawnWashBubbles();
+      }
       saveState();
       render();
       flash();
@@ -1500,7 +1542,11 @@
   // action.js runs the same decay/effect math as the local fn() above, so
   // the two paths should feel identical to a kid tapping the buttons).
   async function syncAction(serverAction) {
-    if (ACTION_POSES[serverAction]) showActionPose(ACTION_POSES[serverAction], pickItem(state.species, serverAction));
+    var itemSrc = ACTION_POSES[serverAction] ? pickItem(state.species, serverAction) : null;
+    if (ACTION_POSES[serverAction]) {
+      showActionPose(ACTION_POSES[serverAction], itemSrc);
+      if (serverAction === 'clean' && itemSrc === CLEAN_ITEM_SPONGE) spawnWashBubbles();
+    }
     flash();
     try {
       var data = await api('/api/pets/' + device.petId + '/action', {
@@ -1706,6 +1752,40 @@
     if (bubbleTimer) clearInterval(bubbleTimer);
     bubbleTimer = null;
     hatchBubbles.innerHTML = '';
+  }
+
+  // Sponge-wash burst: unlike the continuous hatch-bubble stream above,
+  // this fires a one-off bunch around the pet's feet whenever the sponge
+  // (not the brush) is picked as the clean item, staggered slightly so
+  // they don't all rise in lockstep. Reuses the same bubble sprites/sizing
+  // logic, but each one pops (.wash-bubble / bubblePop) partway up rather
+  // than drifting all the way to the top of the stage.
+  var WASH_BUBBLE_COUNT = 7;
+
+  function spawnWashBubble(delayMs) {
+    setTimeout(function () {
+      var el = document.createElement('img');
+      el.className = 'wash-bubble';
+      el.src = BUBBLE_SPRITES[Math.floor(Math.random() * BUBBLE_SPRITES.length)];
+      el.alt = '';
+      var spriteW = petSprite.getBoundingClientRect().width || 128;
+      el.style.setProperty('--bubble-size', Math.round(16 * (spriteW / 128)) + 'px');
+      // Spread across the pet's stance rather than the hatch bubbles' single
+      // shell-lip band, and anchored right at the feet (low on the stage).
+      el.style.left = (26 + Math.random() * 48) + '%';
+      el.style.bottom = (4 + Math.random() * 10) + '%';
+      el.style.setProperty('--bubble-dur', (1.0 + Math.random() * 0.5).toFixed(2) + 's');
+      el.style.setProperty('--bubble-drift', (Math.random() * 14 - 7).toFixed(0) + 'px');
+      el.addEventListener('animationend', function () { el.remove(); });
+      washBubbles.appendChild(el);
+    }, delayMs);
+  }
+
+  function spawnWashBubbles() {
+    washBubbles.innerHTML = '';
+    for (var i = 0; i < WASH_BUBBLE_COUNT; i++) {
+      spawnWashBubble(Math.random() * 500);
+    }
   }
 
   function clearHatchTimers() {

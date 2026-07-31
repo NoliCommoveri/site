@@ -479,10 +479,41 @@ named `assets/<species>-food-<name>.png` / `assets/<species>-toy-<name>.png`.
 (currently wolf, which is unused) simply gets no travelling item rather than
 a broken image.
 
-**Clean stays shared.** There's nothing species-flavored about soap and
-bubbles, so every species reuses one sprite — currently `assets/bubble-md.png`
-— rather than multiplying art for a wash effect that looks the same on
-everyone.
+**Clean stays shared, but picks between two items now.** There's nothing
+species-flavored about washing up, so every species reuses the same pair of
+sprites rather than multiplying art for a wash effect that looks the same on
+everyone — but which of the two travels in depends on how dirty the pet
+actually is: `assets/clean-sponge.png` below the cleanliness threshold
+(`CLEAN_ITEM_THRESHOLD = 85` in `index.html`), `assets/clean-brush.png` at or
+above it. `pickItem()` reads `state.cleanliness` at call time, so callers
+have to run it *before* the clean action's effect function resets
+cleanliness to 100 — `doAction()` captures the item choice ahead of `fn()`
+for exactly this reason.
+
+Both were sourced from a glossy, softly-shaded reference image (isometric
+mobile-icon style, smooth gradients, AA edges) — nothing like the flat
+cel-shaded, hard-outlined look every other item on this page uses. A first
+pass that just chroma-keyed/trimmed/downscaled it kept that gradient look
+and read as visibly off-style next to `dragon-food-meat.png` and its
+siblings. Fixed by actually pixelating rather than just downscaling: box-
+downsample to a coarse ~30px native grid (kills the gradient), median-cut
+quantize to ~13 flat colors (bands the shading), scale back up with
+nearest-neighbour (crisp square pixels, no re-blur), hard-threshold alpha
+to a binary silhouette (no soft edge fade), then stamp a 1px hue-shifted
+dark outline on any transparent pixel touching an opaque one — the same
+"dark outline, never pure black" rule pose art uses.
+
+When the sponge is picked (i.e. the pet started below the threshold),
+`spawnWashBubbles()` also fires a one-off burst of bubbles around the pet's
+feet — a deliberate, scoped exception to "no action gets a...particle burst"
+below: soap bubbles read as part of the wash, not as combat feedback, so
+they stay in the calm/cozy register the rule is protecting. They reuse the
+same `BUBBLE_SPRITES` art as the hatch-sequence bubbles (`.wash-bubble` /
+`bubblePop` vs. `.hatch-bubble` / `bubbleRise` in `index.html`), but rise
+only about 60% of the hatch bubbles' full travel before popping — a quick
+scale-up-and-fade — rather than drifting to the top of the stage and fading
+out gradually. The brush gets no burst; it's presented as already-mostly-
+clean upkeep rather than a sudsy wash.
 
 Items must be **separate files**, never drawn into a pose. The first
 generated sheet baked food into four of its eight cells, which breaks the
@@ -505,8 +536,10 @@ remaining work here.
 
 Deliberately out of scope for now: Sleep gets no travelling item (nothing is
 being applied to the pet — the pet changes state), and no action gets a
-screen-shake, flash, or particle burst. The tone in §1 is calm and cozy;
-these should read as gentle, not as combat feedback.
+screen-shake or flash. The tone in §1 is calm and cozy; these should read as
+gentle, not as combat feedback. (The sponge-wash bubble burst above is the
+one particle-burst exception — see "Clean stays shared" — because it reads
+as suds, not impact.)
 
 ### Fallback chain
 
