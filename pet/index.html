@@ -381,6 +381,29 @@
     25% { transform: rotate(5deg) translateX(5px) translateY(-2px); }
     75% { transform: rotate(-5deg) translateX(-5px) translateY(1px); }
   }
+  /* Bubbles rise on their own layer, deliberately outside .hatch-sprite:
+     the shake classes transform the sprite, and bubbles escaping the shell
+     should drift straight up rather than shake along with it. Same reason
+     §5 keeps items in separate files instead of drawing them into a pose. */
+  .hatch-bubbles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .hatch-bubble {
+    position: absolute;
+    width: var(--bubble-size, 16px);
+    image-rendering: pixelated;
+    opacity: 0;
+    animation: bubbleRise var(--bubble-dur, 2s) linear forwards;
+  }
+  @keyframes bubbleRise {
+    0% { transform: translate(0, 0) scale(0.75); opacity: 0; }
+    15% { opacity: 0.95; }
+    70% { opacity: 0.85; }
+    100% { transform: translate(var(--bubble-drift, 0px), -78px) scale(1); opacity: 0; }
+  }
   /* Covers the stage at full black, then fades out — the "dark screen
      lightens" beat. Positioned last in the DOM among .hatch-stage's
      children so it paints above the sprite regardless of flex order. */
@@ -450,6 +473,7 @@
     <div class="species-picker" id="hatch-sequence">
       <div class="hatch-stage" id="hatch-stage">
         <img id="hatch-sprite" class="hatch-sprite" alt="">
+        <div class="hatch-bubbles" id="hatch-bubbles"></div>
         <div class="hatch-dark" id="hatch-dark"></div>
       </div>
       <p class="status hatch-caption" id="hatch-caption"></p>
@@ -1285,10 +1309,26 @@
         crack2: 'assets/dragon-egg-crack2.png',
         hatch: 'assets/dragon-hatch.png'
       }
+    },
+    hippocampus: {
+      label: 'Hippocampus',
+      // Hatches from an oyster, not an egg — see SPEC.md. Only the opening
+      // caption names the container, so this is the whole override.
+      intro: 'Look, a giant oyster. I wonder what’s inside?',
+      // Opt-in: this is the only species that hatches underwater, and
+      // bubbles rising off a dirt nest or a bed of coals would be wrong.
+      bubbles: true,
+      frames: {
+        egg: 'assets/hippocampus-egg.png',
+        crack1: 'assets/hippocampus-egg-crack1.png',
+        crack2: 'assets/hippocampus-egg-crack2.png',
+        hatch: 'assets/hippocampus-hatch.png'
+      }
     }
   };
 
   var hatchSprite = document.getElementById('hatch-sprite');
+  var hatchBubbles = document.getElementById('hatch-bubbles');
   var hatchDark = document.getElementById('hatch-dark');
   var hatchCaption = document.getElementById('hatch-caption');
   var hatchNameForm = document.getElementById('hatch-name-form');
@@ -1339,9 +1379,50 @@
     } catch (e) { /* WebAudio unavailable — silent is fine */ }
   }
 
+  // --- Bubbles --------------------------------------------------------
+  //
+  // Spawned as their own absolutely-positioned elements rather than drawn
+  // into the frames, so they keep rising while the sprite shakes and so a
+  // frame that sits on screen for 3s isn't showing frozen bubbles.
+  var BUBBLE_SPRITES = ['assets/bubble-sm.png', 'assets/bubble-md.png', 'assets/bubble-lg.png'];
+  var bubbleTimer = null;
+
+  function spawnBubble() {
+    var el = document.createElement('img');
+    el.className = 'hatch-bubble';
+    el.src = BUBBLE_SPRITES[Math.floor(Math.random() * BUBBLE_SPRITES.length)];
+    el.alt = '';
+    // Sized off the sprite's rendered width so a bubble pixel is the same
+    // size on screen as a shell pixel — the 128px art is displayed at up to
+    // 170px, so a fixed 16px would render visibly finer than the sprite.
+    var spriteW = hatchSprite.getBoundingClientRect().width || 128;
+    el.style.setProperty('--bubble-size', Math.round(16 * (spriteW / 128)) + 'px');
+    // Emitted along the shell's lip, which sits left of centre and a little
+    // below the middle of the stage once the sprite is centred.
+    el.style.left = (33 + Math.random() * 24) + '%';
+    el.style.bottom = (27 + Math.random() * 6) + '%';
+    el.style.setProperty('--bubble-dur', (1.7 + Math.random() * 1.2).toFixed(2) + 's');
+    el.style.setProperty('--bubble-drift', (Math.random() * 16 - 8).toFixed(0) + 'px');
+    el.addEventListener('animationend', function () { el.remove(); });
+    hatchBubbles.appendChild(el);
+  }
+
+  function startBubbles(everyMs) {
+    if (bubbleTimer) clearInterval(bubbleTimer);
+    bubbleTimer = setInterval(spawnBubble, everyMs);
+    spawnBubble();
+  }
+
+  function stopBubbles() {
+    if (bubbleTimer) clearInterval(bubbleTimer);
+    bubbleTimer = null;
+    hatchBubbles.innerHTML = '';
+  }
+
   function clearHatchTimers() {
     hatchTimers.forEach(clearTimeout);
     hatchTimers = [];
+    stopBubbles();
   }
 
   function hatchAfter(ms, fn) {
@@ -1363,7 +1444,10 @@
     hatchContinueBtn.style.display = 'none';
     hatchNameInput.value = '';
     setHatchFrame(seq.frames.egg, '');
-    hatchCaption.textContent = "What's this? A " + seq.label + ' egg...';
+    // Only the opening line names the container, so it's the only caption a
+    // non-egg species has to override (hippocampus hatches from an oyster).
+    // Every later beat says "the baby <label>" or nothing container-specific.
+    hatchCaption.textContent = seq.intro || "What's this? A " + seq.label + ' egg...';
 
     // Double rAF forces a style flush between removing 'lit' and re-adding
     // it, so the opacity transition actually runs instead of collapsing
@@ -1380,16 +1464,21 @@
     hatchAfter(8000, function () {
       playCrackSound();
       setHatchFrame(seq.frames.crack1, 'shake-light');
+      // The shell first opens here, so this is where bubbles can escape.
+      if (seq.bubbles) startBubbles(700);
     });
 
     hatchAfter(11200, function () {
       hatchCaption.textContent = 'Look, the baby ' + seq.label + ' is trying to get out!';
       setHatchFrame(seq.frames.crack2, 'shake-medium');
+      if (seq.bubbles) startBubbles(430);
     });
 
     hatchAfter(15200, function () {
       playCrackSound();
       setHatchFrame(seq.frames.hatch, 'shake-big');
+      // Settle to a gentle trickle — the shell is open, nothing is straining.
+      if (seq.bubbles) startBubbles(1000);
       hatchCaption.textContent = 'Oh wow, it looks like you have a new best friend! What’s its name?';
       hatchAfter(1000, function () {
         setHatchFrame(seq.frames.hatch, '');

@@ -560,10 +560,51 @@ this doc, so they're excluded from that plan):
   their own species' poses. `reference/dragon-egg-reference-4x.png` holds
   all four hatch frames (4x) for attaching when generating dragon's action
   poses next.
-- ⬜ Unicorn, pegasus, hippocampus — no hatch art yet; picking these
-  species still skips straight to instant pet creation. Remaining work is
-  art-only (four frames each), no further code changes needed beyond
-  their `HATCH_SEQUENCES` entry.
+- ✅ Hippocampus — full 4-frame set drawn and wired (2026-07-31, ported
+  from `NoliCommoveri/Critteria`). Not an egg at all: a **mussel shell on
+  the seabed** that opens to reveal the hatchling, since a seahorse-dragon
+  cracking out of a bird's egg reads wrong. The beat timing, shake
+  classes, frame keys and crack sound are all unchanged — the shell frames
+  simply occupy the `egg`/`crack1`/`crack2`/`hatch` slots.
+
+  Two things this needed beyond a plain `HATCH_SEQUENCES` entry. First, an
+  optional `intro` string on the entry, because the opening caption is the
+  only one that names the container ("A T-Rex egg…"); every later beat is
+  container-neutral or says "the baby `<label>`", both fine for a shell.
+  It falls back to the egg wording when absent, so T-Rex and dragon are
+  untouched. Second, an opt-in `bubbles: true` flag — see below.
+
+  The shell needed its own 7-colour sub-ramp
+  (`reference/hippocampus-hatch-shell-palette.txt`/`.png`) over the locked
+  teal `hippocampus-palette.txt`, the same way dragon's coals did:
+  grey-blue outside, warm rose nacre inside, ochre sand. The split is
+  deliberate — the cool exterior gives the shell its own identity against
+  a teal creature, while the warm interior is what the hatchling is seen
+  against in the reveal, at L\* 85.4 against the body teal's 73.0 so it
+  reads as a dark shape on a bright ground. The pearl highlight and the
+  outline reuse the locked ramp's `#fbfcfb` and `#103133` rather than
+  adding near-duplicates.
+
+  Registration follows the curled-`sleep`-pose approach rather than the
+  egg species' height fill, since a shell is wide and low: scaled by
+  width, ground line on row 116 matching the other hippocampus poses. All
+  four frames are anchored on the **mean of the shell and sand widths** —
+  anchoring on either alone let the other breathe ~7px across the set,
+  because the generator never held their ratio constant.
+
+  **Bubbles** (`assets/bubble-sm/-md/-lg.png`) are hand-authored 5/7/9px
+  sprites on the locked ramp, spawned into `.hatch-bubbles` — a sibling of
+  the sprite, not a child. This is the same rule that keeps items out of
+  poses: the shake classes transform `.hatch-sprite`, so bubbles drawn
+  into a frame would shake with the shell rather than rise past it, and
+  would sit frozen for the seconds a frame is on screen. Each is sized
+  from the sprite's rendered width so a bubble pixel matches a shell
+  pixel. `bubbles: true` is per-species on purpose — a dirt nest and a bed
+  of hot coals should not emit bubbles.
+- ⬜ Unicorn, pegasus — no hatch art yet; picking these species still
+  skips straight to instant pet creation. Remaining work is art-only
+  (four frames each), no further code changes needed beyond their
+  `HATCH_SEQUENCES` entry.
 
 ### Species selection
 Species is picked once, at first launch, and then locked for the life of
